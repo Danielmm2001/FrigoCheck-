@@ -35,11 +35,27 @@ Reglas generales:
 - Extrae solo productos reales.
 - Ignora descuentos, impuestos, métodos de pago, datos legales y mensajes promocionales.
 - Normaliza nombres abreviados sin cambiar el sentido del producto.
+- Si no estás seguro de la normalización, conserva el nombre original y usa confidence low o medium.
 - Si el total del ticket no es visible o no se puede leer con seguridad, usa total_amount: null.
 - Si la fecha no se ve clara, usa purchase_date: null.
 - No inventes datos que no aparezcan o no puedan deducirse con seguridad.
 - Une líneas duplicadas del mismo producto solo si son claramente el mismo producto repetido.
 - Añade una advertencia indicando que el usuario debe revisar la fecha real del envase.
+
+Reglas de abreviaturas habituales:
+- "HIG.CERDO", "HIG CERDO" o similar significa "hígado de cerdo", no "higiénico".
+- "PATE HIG.CERDO" debe normalizarse como "paté de hígado de cerdo", category: meat, storage_location: fridge.
+- "SALCHICHAS FR." significa "salchichas frescas", category: meat, storage_location: fridge.
+- "C/Q" puede significar "con queso" si aparece en contexto de salchicha, lonchas o similar.
+- "MARGARI." en pizza suele significar "margarita".
+- No expandas abreviaturas ambiguas si no hay contexto suficiente.
+
+Reglas de categoría:
+- Paté, pollo, alas de pollo, salchichas, bacon, lomo y embutidos son category: meat.
+- Queso, yogur, leche y lonchas de queso son category: dairy.
+- Tomate y pepino son category: vegetables.
+- Plátano, manzana, naranja y otras frutas son category: fruit.
+- Ketchup, mayonesa cerrada, sal, frutos secos y salsas no refrigeradas son category: pantry.
 
 Reglas de ubicación:
 - Usa freezer solo si el ticket o el nombre indican claramente que es congelado.
