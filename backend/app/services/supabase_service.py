@@ -102,3 +102,40 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
         supabase.table("product_events").insert(event_rows).execute()
 
     return {"receipt_id": receipt_id, "products_saved": products_saved}
+
+
+def list_products_for_user(user_id: str, status: str | None = None) -> list[dict[str, Any]]:
+    supabase = get_supabase_client()
+    query = supabase.table("products").select("*").eq("user_id", user_id).order("estimated_expiry_date")
+
+    if status:
+        query = query.eq("status", status)
+
+    result = query.execute()
+    return result.data or []
+
+
+def mark_product_status(product_id: str, user_id: str, status: str, event_type: str) -> dict[str, Any]:
+    supabase = get_supabase_client()
+
+    update_result = (
+        supabase.table("products")
+        .update({"status": status})
+        .eq("id", product_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    if not update_result.data:
+        raise RuntimeError("Product not found or not updated")
+
+    supabase.table("product_events").insert(
+        {
+            "user_id": user_id,
+            "product_id": product_id,
+            "event_type": event_type,
+            "metadata": {"source": "api"},
+        }
+    ).execute()
+
+    return update_result.data[0]
