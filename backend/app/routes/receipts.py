@@ -1,6 +1,8 @@
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from app.schemas.receipt import SaveReceiptRequest, SaveReceiptResponse
 from app.services.openai_service import analyze_receipt_image
+from app.services.supabase_service import save_receipt_with_products
 
 router = APIRouter()
 
@@ -21,10 +23,13 @@ async def analyze_receipt(user_id: str = Form(...), image: UploadFile = File(...
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.post("/save")
-def save_receipt():
-    """Placeholder for saving confirmed receipt/products into Supabase."""
-    return {"status": "pending", "message": "Save receipt endpoint not implemented yet"}
+@router.post("/save", response_model=SaveReceiptResponse)
+def save_receipt(payload: SaveReceiptRequest):
+    """Save a confirmed receipt and its detected products into Supabase."""
+    try:
+        return save_receipt_with_products(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
