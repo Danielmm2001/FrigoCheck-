@@ -6,6 +6,8 @@ from supabase import Client, create_client
 from app.config import settings
 from app.schemas.receipt import SaveReceiptRequest
 
+FINAL_PRODUCT_STATUSES = {"consumed", "wasted", "expired"}
+
 
 def _normalize_supabase_url(url: str) -> str:
     """Return the project base URL expected by supabase-py.
@@ -118,23 +120,43 @@ def list_products_for_user(user_id: str, status: str | None = None) -> list[dict
 def mark_product_status(product_id: str, user_id: str, status: str, event_type: str) -> dict[str, Any]:
     supabase = get_supabase_client()
 
+    current_result = (
+        supabase.table("products")
+        .select("id,status")
+        .eq("id", product_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+
+    if not current_result.data:
+        raise RuntimeError("Product not found")
+
+    current_status = current_result.data[0].get("status")
+    if current_status in FINAL_PRODUCT_STATUSES:
+        raise RuntimeError(f"Product already has final status: {current_status}")
+
+    if status not in FINAL_PRODUCT_STATUSES:
+        raise RuntimeError(f"Invalid final status: {status}")
+
     update_result = (
         supabase.table("products")
         .update({"status": status})
         .eq("id", product_id)
         .eq("user_id", user_id)
+        .eq("status", "active")
         .execute()
     )
 
     if not update_result.data:
-        raise RuntimeError("Product not found or not updated")
+        raise RuntimeError("Product not updated because it is not active")
 
     supabase.table("product_events").insert(
         {
             "user_id": user_id,
             "product_id": product_id,
             "event_type": event_type,
-            "metadata": {"source": "api"},
+            "metadata": {"source": "api", "previous_status": current_status, "new_status": status},
         }
     ).execute()
 
