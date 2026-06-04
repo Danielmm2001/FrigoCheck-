@@ -31,3 +31,16 @@ class SaveReceiptRequest(BaseModel):
 class SaveReceiptResponse(BaseModel):
     receipt_id: str
     products_saved: int
+
+
+class UpdateProductRequest(BaseModel):
+    name: str | None = None
+    normalized_name: str | None = None
+    category: str | None = None
+    quantity: float | None = None
+    unit: str | None = None
+    storage_location: str | None = None
+    purchase_date: str | None = None
+    estimated_expiry_date: str | None = None
+    expiry_confidence: str | None = None
+    notes: str | None = None
