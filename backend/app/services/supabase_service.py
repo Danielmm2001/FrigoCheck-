@@ -7,10 +7,25 @@ from app.config import settings
 from app.schemas.receipt import SaveReceiptRequest
 
 
+def _normalize_supabase_url(url: str) -> str:
+    """Return the project base URL expected by supabase-py.
+
+    Supabase client expects: https://PROJECT_REF.supabase.co
+    It should not include /rest/v1, /auth/v1, /storage/v1, etc.
+    """
+    cleaned = url.strip().rstrip("/")
+    for suffix in ("/rest/v1", "/auth/v1", "/storage/v1", "/functions/v1"):
+        if cleaned.endswith(suffix):
+            cleaned = cleaned[: -len(suffix)]
+    return cleaned
+
+
 def get_supabase_client() -> Client:
     if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
         raise RuntimeError("Supabase is not configured. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY")
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+
+    supabase_url = _normalize_supabase_url(settings.SUPABASE_URL)
+    return create_client(supabase_url, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
 def _safe_purchase_date(value: str | None) -> str:
