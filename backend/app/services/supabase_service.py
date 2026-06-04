@@ -4,17 +4,25 @@ from typing import Any
 from supabase import Client, create_client
 
 from app.config import settings
-from app.schemas.receipt import SaveReceiptRequest
+from app.schemas.receipt import SaveReceiptRequest, UpdateProductRequest
 
-FINAL_PRODUCT_STATUSES = {"consumed", "wasted", "expired"}
+FINAL_PRODUCT_STATUSES = {"consumed", "wasted", "expired", "deleted"}
+EDITABLE_PRODUCT_FIELDS = {
+    "name",
+    "normalized_name",
+    "category",
+    "quantity",
+    "unit",
+    "storage_location",
+    "purchase_date",
+    "estimated_expiry_date",
+    "expiry_confidence",
+    "notes",
+}
 
 
 def _normalize_supabase_url(url: str) -> str:
-    """Return the project base URL expected by supabase-py.
-
-    Supabase client expects: https://PROJECT_REF.supabase.co
-    It should not include /rest/v1, /auth/v1, /storage/v1, etc.
-    """
+    """Return the project base URL expected by supabase-py."""
     cleaned = url.strip().rstrip("/")
     for suffix in ("/rest/v1", "/auth/v1", "/storage/v1", "/functions/v1"):
         if cleaned.endswith(suffix):
@@ -108,13 +116,68 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
 
 def list_products_for_user(user_id: str, status: str | None = None) -> list[dict[str, Any]]:
     supabase = get_supabase_client()
-    query = supabase.table("products").select("*").eq("user_id", user_id).order("estimated_expiry_date")
+    query = supabase.table("products").select("*").eq("user_id", user_id).neq("status", "deleted").order("estimated_expiry_date")
 
     if status:
         query = query.eq("status", status)
 
     result = query.execute()
     return result.data or []
+
+
+def get_product_for_user(product_id: str, user_id: str) -> dict[str, Any]:
+    supabase = get_supabase_client()
+    result = (
+        supabase.table("products")
+        .select("*")
+        .eq("id", product_id)
+        .eq("user_id", user_id)
+        .neq("status", "deleted")
+        .limit(1)
+        .execute()
+    )
+
+    if not result.data:
+        raise RuntimeError("Product not found")
+
+    return result.data[0]
+
+
+def update_product_for_user(product_id: str, user_id: str, payload: UpdateProductRequest) -> dict[str, Any]:
+    supabase = get_supabase_client()
+    current_product = get_product_for_user(product_id=product_id, user_id=user_id)
+
+    if current_product.get("status") in FINAL_PRODUCT_STATUSES:
+        raise RuntimeError(f"Product cannot be edited because it has final status: {current_product.get('status')}")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    update_data = {key: value for key, value in update_data.items() if key in EDITABLE_PRODUCT_FIELDS}
+
+    if not update_data:
+        raise RuntimeError("No valid fields to update")
+
+    result = (
+        supabase.table("products")
+        .update(update_data)
+        .eq("id", product_id)
+        .eq("user_id", user_id)
+        .eq("status", "active")
+        .execute()
+    )
+
+    if not result.data:
+        raise RuntimeError("Product not updated")
+
+    supabase.table("product_events").insert(
+        {
+            "user_id": user_id,
+            "product_id": product_id,
+            "event_type": "edited",
+            "metadata": {"source": "api", "changes": update_data},
+        }
+    ).execute()
+
+    return result.data[0]
 
 
 def mark_product_status(product_id: str, user_id: str, status: str, event_type: str) -> dict[str, Any]:
@@ -125,6 +188,7 @@ def mark_product_status(product_id: str, user_id: str, status: str, event_type: 
         .select("id,status")
         .eq("id", product_id)
         .eq("user_id", user_id)
+        .neq("status", "deleted")
         .limit(1)
         .execute()
     )
@@ -139,7 +203,7 @@ def mark_product_status(product_id: str, user_id: str, status: str, event_type: 
     if status not in FINAL_PRODUCT_STATUSES:
         raise RuntimeError(f"Invalid final status: {status}")
 
-    update_result = (
+    result = (
         supabase.table("products")
         .update({"status": status})
         .eq("id", product_id)
@@ -148,7 +212,7 @@ def mark_product_status(product_id: str, user_id: str, status: str, event_type: 
         .execute()
     )
 
-    if not update_result.data:
+    if not result.data:
         raise RuntimeError("Product not updated because it is not active")
 
     supabase.table("product_events").insert(
@@ -160,4 +224,51 @@ def mark_product_status(product_id: str, user_id: str, status: str, event_type: 
         }
     ).execute()
 
-    return update_result.data[0]
+    return result.data[0]
+
+
+def delete_product_for_user(product_id: str, user_id: str) -> dict[str, Any]:
+    return mark_product_status(product_id=product_id, user_id=user_id, status="deleted", event_type="deleted")
+
+
+def get_stats_summary_for_user(user_id: str) -> dict[str, Any]:
+    products = list_products_for_user(user_id=user_id)
+    active_products = [product for product in products if product.get("status") == "active"]
+    consumed_products = [product for product in products if product.get("status") == "consumed"]
+    wasted_products = [product for product in products if product.get("status") == "wasted"]
+    expired_products = [product for product in products if product.get("status") == "expired"]
+
+    total_final = len(consumed_products) + len(wasted_products) + len(expired_products)
+    usage_percentage = round((len(consumed_products) / total_final) * 100) if total_final else 0
+
+    today = date.today()
+    expiring_soon = []
+    expired_active = []
+    for product in active_products:
+        expiry_date_value = product.get("estimated_expiry_date")
+        if not expiry_date_value:
+            continue
+        expiry_date = date.fromisoformat(expiry_date_value)
+        days_left = (expiry_date - today).days
+        if days_left < 0:
+            expired_active.append(product)
+        elif days_left <= 2:
+            expiring_soon.append(product)
+
+    score = len(consumed_products) * 10 - (len(wasted_products) + len(expired_products)) * 5
+    if score < 0:
+        score = 0
+
+    return {
+        "active_count": len(active_products),
+        "consumed_count": len(consumed_products),
+        "wasted_count": len(wasted_products),
+        "expired_count": len(expired_products),
+        "expiring_soon_count": len(expiring_soon),
+        "expired_active_count": len(expired_active),
+        "usage_percentage": usage_percentage,
+        "estimated_savings": 0,
+        "current_streak": 0,
+        "score": score,
+        "level": "Nevera en control" if usage_percentage >= 80 else "Aprendiz anti-desperdicio",
+    }
