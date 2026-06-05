@@ -29,6 +29,42 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     return _products.fold<double>(0, (total, product) => total + (product.price ?? 0));
   }
 
+  String _numberInputValue(num? value) {
+    if (value == null) return '';
+    if (value % 1 == 0) return value.toInt().toString();
+    return value.toString();
+  }
+
+  String _cleanProductTitle(DetectedProductModel product) {
+    var title = (product.normalizedName?.trim().isNotEmpty ?? false) ? product.normalizedName!.trim() : product.name.trim();
+
+    title = title
+        .replaceAll(RegExp(r'\b\d+\s*[xX]\s*\d+([,.]\d+)?\s*(g|kg|ml|l|u|ud|uds|unidades|pcs)?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b\d+([,.]\d+)?\s*(g|kg|ml|l|u|ud|uds|unidades|pcs)\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\bpack\s*\d+\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b\d+\s*pack\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[\-·,]+$'), '')
+        .trim();
+
+    if (title.isEmpty) return product.name;
+    return title;
+  }
+
+  InputDecoration _dialogDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
   Future<void> _saveProducts() async {
     if (_products.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,9 +120,9 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
   }
 
   Future<DetectedProductModel?> _showProductDialog(DetectedProductModel product, {required String title}) async {
-    final nameController = TextEditingController(text: product.name);
-    final quantityController = TextEditingController(text: product.quantity.toString());
-    final expiryController = TextEditingController(text: product.estimatedExpiryDays?.toString() ?? '');
+    final nameController = TextEditingController(text: _cleanProductTitle(product));
+    final quantityController = TextEditingController(text: _numberInputValue(product.quantity));
+    final expiryController = TextEditingController(text: _numberInputValue(product.estimatedExpiryDays));
     final priceController = TextEditingController(text: product.price?.toStringAsFixed(2) ?? '');
 
     return showDialog<DetectedProductModel>(
@@ -96,64 +132,71 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
         String storage = product.storageLocation;
         return AlertDialog(
           title: Text(title),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Nombre'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: quantityController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Cantidad'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: expiryController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Días hasta caducar'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: priceController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Precio del producto añadido (€)'),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: category,
-                  decoration: const InputDecoration(labelText: 'Categoría'),
-                  items: const [
-                    DropdownMenuItem(value: 'dairy', child: Text('Lácteos')),
-                    DropdownMenuItem(value: 'cheese', child: Text('Queso')),
-                    DropdownMenuItem(value: 'yogurt', child: Text('Yogur')),
-                    DropdownMenuItem(value: 'meat', child: Text('Carne')),
-                    DropdownMenuItem(value: 'poultry', child: Text('Pollo / ave')),
-                    DropdownMenuItem(value: 'fish', child: Text('Pescado')),
-                    DropdownMenuItem(value: 'seafood', child: Text('Marisco')),
-                    DropdownMenuItem(value: 'eggs', child: Text('Huevos')),
-                    DropdownMenuItem(value: 'refrigerated_ready_meal', child: Text('Plato refrigerado')),
-                    DropdownMenuItem(value: 'frozen', child: Text('Congelado')),
-                    DropdownMenuItem(value: 'fruit', child: Text('Fruta refrigerada')),
-                    DropdownMenuItem(value: 'vegetables', child: Text('Verdura refrigerada')),
-                    DropdownMenuItem(value: 'other_refrigerated', child: Text('Otro refrigerado')),
-                  ],
-                  onChanged: (value) => category = value ?? category,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: storage,
-                  decoration: const InputDecoration(labelText: 'Ubicación'),
-                  items: const [
-                    DropdownMenuItem(value: 'fridge', child: Text('Nevera')),
-                    DropdownMenuItem(value: 'freezer', child: Text('Congelador')),
-                  ],
-                  onChanged: (value) => storage = value ?? storage,
-                ),
-              ],
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+          content: SizedBox(
+            width: 380,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: _dialogDecoration('Nombre'),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: _dialogDecoration('Cantidad'),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: expiryController,
+                    keyboardType: TextInputType.number,
+                    decoration: _dialogDecoration('Días hasta caducar'),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: _dialogDecoration('Precio añadido (€)'),
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    value: category,
+                    isExpanded: true,
+                    decoration: _dialogDecoration('Categoría'),
+                    items: const [
+                      DropdownMenuItem(value: 'dairy', child: Text('Lácteos')),
+                      DropdownMenuItem(value: 'cheese', child: Text('Queso')),
+                      DropdownMenuItem(value: 'yogurt', child: Text('Yogur')),
+                      DropdownMenuItem(value: 'meat', child: Text('Carne')),
+                      DropdownMenuItem(value: 'poultry', child: Text('Pollo / ave')),
+                      DropdownMenuItem(value: 'fish', child: Text('Pescado')),
+                      DropdownMenuItem(value: 'seafood', child: Text('Marisco')),
+                      DropdownMenuItem(value: 'eggs', child: Text('Huevos')),
+                      DropdownMenuItem(value: 'refrigerated_ready_meal', child: Text('Plato refrigerado')),
+                      DropdownMenuItem(value: 'frozen', child: Text('Congelado')),
+                      DropdownMenuItem(value: 'fruit', child: Text('Fruta refrigerada')),
+                      DropdownMenuItem(value: 'vegetables', child: Text('Verdura refrigerada')),
+                      DropdownMenuItem(value: 'other_refrigerated', child: Text('Otro refrigerado')),
+                    ],
+                    onChanged: (value) => category = value ?? category,
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    value: storage,
+                    isExpanded: true,
+                    decoration: _dialogDecoration('Ubicación'),
+                    items: const [
+                      DropdownMenuItem(value: 'fridge', child: Text('Nevera')),
+                      DropdownMenuItem(value: 'freezer', child: Text('Congelador')),
+                    ],
+                    onChanged: (value) => storage = value ?? storage,
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -167,6 +210,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                 Navigator.of(context).pop(
                   product.copyWith(
                     name: name.isEmpty ? product.name : name,
+                    normalizedName: name.isEmpty ? product.normalizedName : name.toLowerCase(),
                     quantity: quantity,
                     category: category,
                     storageLocation: storage,
@@ -196,57 +240,59 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Productos detectados'),
-        actions: [
-          IconButton(
-            onPressed: _addProduct,
-            icon: const Icon(Icons.add_rounded),
-            tooltip: 'Añadir producto',
-          ),
-        ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(storeName, style: const TextStyle(fontWeight: FontWeight.w900)),
-                        const Text('Revisa, edita, añade o elimina antes de guardar', style: TextStyle(color: AppColors.textSecondary)),
-                        if (widget.analysis.store.purchaseDate != null)
-                          Text('Fecha: ${widget.analysis.store.purchaseDate}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Total añadido', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                      Text('${selectedTotal.toStringAsFixed(2)} €', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(storeName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                            const SizedBox(height: 4),
+                            const Text('Revisa antes de guardar', style: TextStyle(color: AppColors.textSecondary)),
+                            if (widget.analysis.store.purchaseDate != null)
+                              Text('Fecha: ${widget.analysis.store.purchaseDate}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Total añadido', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                          Text('${selectedTotal.toStringAsFixed(2)} €', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, fontSize: 18)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Productos (${_products.length})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                      TextButton.icon(
+                        onPressed: _addProduct,
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Añadir'),
+                      ),
                     ],
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Productos de nevera (${_products.length})', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-                TextButton.icon(
-                  onPressed: _addProduct,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Añadir'),
-                ),
-              ],
             ),
             const SizedBox(height: 12),
             if (widget.analysis.warnings.isNotEmpty)
@@ -288,11 +334,10 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                    Text(_cleanProductTitle(item), style: const TextStyle(fontWeight: FontWeight.w800)),
+                                    const SizedBox(height: 2),
                                     Text('${item.quantityLabel} · ${_storageLabel(item.storageLocation)}', style: const TextStyle(color: AppColors.textSecondary)),
                                     Text(item.priceLabel, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 12)),
-                                    if (item.normalizedName != null && item.normalizedName != item.name)
-                                      Text(item.normalizedName!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                                   ],
                                 ),
                               ),
