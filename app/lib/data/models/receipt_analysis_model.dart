@@ -38,6 +38,7 @@ class DetectedProductModel {
     this.estimatedExpiryDays,
     required this.expiryConfidence,
     required this.confidence,
+    this.price,
     this.notes,
   });
 
@@ -50,6 +51,7 @@ class DetectedProductModel {
   final int? estimatedExpiryDays;
   final String expiryConfidence;
   final String confidence;
+  final double? price;
   final String? notes;
 
   factory DetectedProductModel.fromJson(Map<String, dynamic> json) {
@@ -63,6 +65,7 @@ class DetectedProductModel {
       estimatedExpiryDays: (json['estimated_expiry_days'] as num?)?.toInt(),
       expiryConfidence: json['expiry_confidence']?.toString() ?? 'medium',
       confidence: json['confidence']?.toString() ?? 'medium',
+      price: (json['price'] as num?)?.toDouble(),
       notes: json['notes']?.toString(),
     );
   }
@@ -77,6 +80,7 @@ class DetectedProductModel {
     int? estimatedExpiryDays,
     String? expiryConfidence,
     String? confidence,
+    double? price,
     String? notes,
   }) {
     return DetectedProductModel(
@@ -89,6 +93,7 @@ class DetectedProductModel {
       estimatedExpiryDays: estimatedExpiryDays ?? this.estimatedExpiryDays,
       expiryConfidence: expiryConfidence ?? this.expiryConfidence,
       confidence: confidence ?? this.confidence,
+      price: price ?? this.price,
       notes: notes ?? this.notes,
     );
   }
@@ -104,6 +109,7 @@ class DetectedProductModel {
       'estimated_expiry_days': estimatedExpiryDays,
       'expiry_confidence': expiryConfidence,
       'confidence': confidence,
+      'price': price,
       'notes': notes,
     };
   }
@@ -119,6 +125,11 @@ class DetectedProductModel {
     if (days == 0) return 'Hoy';
     if (days == 1) return '1 día';
     return '$days días';
+  }
+
+  String get priceLabel {
+    if (price == null) return 'Sin precio';
+    return '${price!.toStringAsFixed(2)} €';
   }
 }
 
