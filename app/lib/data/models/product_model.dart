@@ -11,6 +11,7 @@ class ProductModel {
     this.estimatedExpiryDate,
     required this.expiryConfidence,
     required this.status,
+    this.price,
     this.notes,
   });
 
@@ -25,6 +26,7 @@ class ProductModel {
   final String? estimatedExpiryDate;
   final String expiryConfidence;
   final String status;
+  final double? price;
   final String? notes;
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,7 @@ class ProductModel {
       estimatedExpiryDate: json['estimated_expiry_date']?.toString(),
       expiryConfidence: json['expiry_confidence']?.toString() ?? 'medium',
       status: json['status']?.toString() ?? 'active',
+      price: (json['price'] as num?)?.toDouble(),
       notes: json['notes']?.toString(),
     );
   }
@@ -51,6 +54,14 @@ class ProductModel {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return expiry.difference(today).inDays;
+  }
+
+  bool get isExpiredActive => status == 'active' && (daysLeft ?? 9999) < 0;
+
+  bool get isExpiringSoon {
+    if (status != 'active') return false;
+    final days = daysLeft;
+    return days != null && days >= 0 && days <= 2;
   }
 
   String get quantityLabel {
@@ -65,6 +76,11 @@ class ProductModel {
     if (days == 0) return 'Hoy';
     if (days == 1) return '1 día';
     return '$days días';
+  }
+
+  String get priceLabel {
+    if (price == null) return 'Sin precio';
+    return '${price!.toStringAsFixed(2)} €';
   }
 
   String get statusLabel {
