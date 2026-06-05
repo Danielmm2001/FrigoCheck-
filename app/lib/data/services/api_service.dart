@@ -45,6 +45,30 @@ class ApiService {
     return ReceiptAnalysisModel.fromJson(decoded);
   }
 
+  Future<void> saveReceiptProducts({
+    required ReceiptStoreModel store,
+    required List<DetectedProductModel> products,
+    required List<String> warnings,
+    required Map<String, dynamic> rawAiResponse,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/receipts/save');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': ApiConstants.demoUserId,
+        'store': store.toJson(),
+        'products': products.map((product) => product.toJson()).toList(),
+        'warnings': warnings,
+        'raw_ai_response': rawAiResponse,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Error guardando productos: ${response.body}');
+    }
+  }
+
   Future<ProductModel> markConsumed(String productId) async {
     return _changeProductStatus(productId, 'consume');
   }
