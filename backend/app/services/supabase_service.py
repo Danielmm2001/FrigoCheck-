@@ -39,17 +39,10 @@ def get_supabase_client() -> Client:
     return create_client(supabase_url, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
-def _safe_purchase_date(value: str | None) -> str:
-    if value:
-        return value
-    return date.today().isoformat()
-
-
-def _estimate_expiry_date(purchase_date: str | None, days: int | None) -> str | None:
+def _estimate_expiry_date_from_added_date(days: int | None) -> str | None:
     if days is None:
         return None
-    base_date = date.fromisoformat(_safe_purchase_date(purchase_date))
-    return (base_date + timedelta(days=days)).isoformat()
+    return (date.today() + timedelta(days=days)).isoformat()
 
 
 def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
@@ -73,11 +66,9 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
 
     product_rows = []
     event_rows = []
+    added_date = date.today().isoformat()
     for product in payload.products:
-        estimated_expiry_date = _estimate_expiry_date(
-            payload.store.purchase_date,
-            product.estimated_expiry_days,
-        )
+        estimated_expiry_date = _estimate_expiry_date_from_added_date(product.estimated_expiry_days)
         product_rows.append(
             {
                 "user_id": payload.user_id,
@@ -88,7 +79,7 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
                 "quantity": product.quantity,
                 "unit": product.unit,
                 "storage_location": product.storage_location,
-                "purchase_date": _safe_purchase_date(payload.store.purchase_date),
+                "purchase_date": added_date,
                 "estimated_expiry_date": estimated_expiry_date,
                 "expiry_confidence": product.expiry_confidence,
                 "price": product.price,
