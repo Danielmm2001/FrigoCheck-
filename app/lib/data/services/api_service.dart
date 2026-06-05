@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
 import '../../core/constants/api_constants.dart';
 import '../models/product_model.dart';
+import '../models/receipt_analysis_model.dart';
 
 class ApiService {
   const ApiService();
@@ -24,6 +26,23 @@ class ApiService {
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final products = decoded['products'] as List<dynamic>? ?? [];
     return products.map((item) => ProductModel.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<ReceiptAnalysisModel> analyzeReceiptImage(File imageFile) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/receipts/analyze');
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['user_id'] = ApiConstants.demoUserId
+      ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      throw Exception('Error analizando ticket: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return ReceiptAnalysisModel.fromJson(decoded);
   }
 
   Future<ProductModel> markConsumed(String productId) async {
