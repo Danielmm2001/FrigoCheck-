@@ -17,6 +17,7 @@ class DetectedProduct(BaseModel):
     estimated_expiry_days: int | None = None
     expiry_confidence: str = "medium"
     confidence: str = "medium"
+    price: float | None = None
     notes: str | None = None
 
 
@@ -43,4 +44,5 @@ class UpdateProductRequest(BaseModel):
     purchase_date: str | None = None
     estimated_expiry_date: str | None = None
     expiry_confidence: str | None = None
+    price: float | None = None
     notes: str | None = None
