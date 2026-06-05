@@ -12,6 +12,7 @@ Objetivo:
 - Detectar productos perecederos de nevera/congelador.
 - Ayudar al usuario a evitar que se caduquen.
 - No convertir el ticket en una lista completa de compra.
+- Extraer el precio de cada producto incluido para calcular ahorro/pérdida solo de esos productos.
 
 Devuelve este formato JSON:
 {
@@ -31,6 +32,7 @@ Devuelve este formato JSON:
       "estimated_expiry_days": 1,
       "expiry_confidence": "low | medium | high",
       "confidence": "low | medium | high",
+      "price": 0,
       "notes": "string | null"
     }
   ],
@@ -48,12 +50,19 @@ Reglas generales:
 - Une líneas duplicadas del mismo producto solo si son claramente el mismo producto repetido.
 - Añade una advertencia indicando que el usuario debe revisar la fecha real del envase.
 
+Reglas de precio:
+- price debe ser el importe total de esa línea/producto incluido, no el total del ticket.
+- Si una línea tiene cantidad y precio total, usa el precio total de la línea.
+- Si el precio no se ve claro, usa price: null.
+- No sumes productos excluidos en ningún campo.
+
 Regla principal de filtrado:
 - Incluye productos que normalmente se guardan en fridge o freezer.
 - Excluye productos que normalmente van en despensa o fuera de nevera aunque aparezcan en el ticket.
 - No incluyas pan, bollería seca, bebidas, agua, refrescos, cerveza, vino, sal, azúcar, café, cacao, frutos secos, snacks, patatas fritas, conservas, latas, pasta, arroz, aceite, vinagre, cereales, galletas, chocolate, salsas cerradas, ketchup o mayonesa cerrada.
-- No incluyas fruta o verdura que normalmente se deja fuera de nevera salvo que sea claramente producto refrigerado, ensalada preparada, IV gama, fruta cortada, verdura cortada, bandeja refrigerada o producto muy perecedero indicado.
-- Si dudas entre pantry y fridge, exclúyelo salvo que el nombre sugiera refrigerado.
+- Sí incluye verduras frescas de nevera como lechuga, espinacas, rúcula, canónigos, ensalada preparada, bolsa de ensalada, acelgas, brócoli, coliflor, champiñones, setas y verduras cortadas o en bandeja.
+- Sí incluye fruta cortada o fruta preparada refrigerada. Fruta entera como plátano, naranja o manzana solo inclúyela si el usuario probablemente la refrigeraría o si es producto preparado/refrigerado.
+- Si dudas entre pantry y fridge, exclúyelo salvo que el nombre sugiera refrigerado o verdura fresca claramente perecedera.
 
 Reglas de abreviaturas habituales:
 - "HIG.CERDO", "HIG CERDO" o similar significa "hígado de cerdo", no "higiénico".
@@ -71,12 +80,14 @@ Reglas de categoría:
 - Yogures, kéfir y postres lácteos refrigerados son category: yogurt.
 - Leche fresca refrigerada, nata fresca y mantequilla son category: dairy.
 - Huevos son category: eggs.
+- Lechuga, ensaladas, espinacas, champiñones y verduras frescas perecederas son category: vegetables.
 - Pizzas refrigeradas, platos preparados refrigerados, tortillas refrigeradas y gazpacho refrigerado son category: refrigerated_ready_meal.
 - Productos congelados claros son category: frozen y storage_location: freezer.
 
 Reglas de ubicación:
 - Usa freezer solo si el ticket o el nombre indican claramente que es congelado.
 - Carnes frescas, pollo fresco, salchichas frescas, paté, lácteos, huevos y queso deben ir en fridge.
+- Lechuga y verduras frescas perecederas deben ir en fridge.
 - No uses pantry en products. Si un producto va a pantry, no lo incluyas.
 
 Caducidades orientativas según supermercado español y tipo de producto:
@@ -89,6 +100,8 @@ Caducidades orientativas según supermercado español y tipo de producto:
 - Yogures y postres lácteos: 7-21 días.
 - Leche fresca refrigerada: 5-7 días.
 - Huevos: 14-21 días.
+- Lechuga y ensaladas frescas: 3-5 días.
+- Verduras frescas perecederas: 3-7 días.
 - Platos preparados refrigerados: 2-5 días.
 - Ensaladas preparadas, fruta cortada o verdura cortada: 1-3 días.
 - Congelados: 90-180 días.
