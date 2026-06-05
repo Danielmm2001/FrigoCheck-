@@ -17,6 +17,14 @@ class ReceiptStoreModel {
       totalAmount: (json['total_amount'] as num?)?.toDouble(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'purchase_date': purchaseDate,
+      'total_amount': totalAmount,
+    };
+  }
 }
 
 class DetectedProductModel {
@@ -48,7 +56,7 @@ class DetectedProductModel {
     return DetectedProductModel(
       name: json['name']?.toString() ?? 'Producto',
       normalizedName: json['normalized_name']?.toString(),
-      category: json['category']?.toString() ?? 'other',
+      category: json['category']?.toString() ?? 'other_refrigerated',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 1,
       unit: json['unit']?.toString() ?? 'ud',
       storageLocation: json['storage_location']?.toString() ?? 'fridge',
@@ -56,6 +64,32 @@ class DetectedProductModel {
       expiryConfidence: json['expiry_confidence']?.toString() ?? 'medium',
       confidence: json['confidence']?.toString() ?? 'medium',
       notes: json['notes']?.toString(),
+    );
+  }
+
+  DetectedProductModel copyWith({
+    String? name,
+    String? normalizedName,
+    String? category,
+    double? quantity,
+    String? unit,
+    String? storageLocation,
+    int? estimatedExpiryDays,
+    String? expiryConfidence,
+    String? confidence,
+    String? notes,
+  }) {
+    return DetectedProductModel(
+      name: name ?? this.name,
+      normalizedName: normalizedName ?? this.normalizedName,
+      category: category ?? this.category,
+      quantity: quantity ?? this.quantity,
+      unit: unit ?? this.unit,
+      storageLocation: storageLocation ?? this.storageLocation,
+      estimatedExpiryDays: estimatedExpiryDays ?? this.estimatedExpiryDays,
+      expiryConfidence: expiryConfidence ?? this.expiryConfidence,
+      confidence: confidence ?? this.confidence,
+      notes: notes ?? this.notes,
     );
   }
 
