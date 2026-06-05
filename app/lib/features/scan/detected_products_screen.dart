@@ -25,6 +25,10 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     _products = List<DetectedProductModel>.from(widget.analysis.products);
   }
 
+  double get _selectedProductsTotal {
+    return _products.fold<double>(0, (total, product) => total + (product.price ?? 0));
+  }
+
   Future<void> _saveProducts() async {
     if (_products.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,19 +58,44 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     }
   }
 
+  Future<void> _addProduct() async {
+    final newProduct = const DetectedProductModel(
+      name: 'Nuevo producto',
+      category: 'other_refrigerated',
+      quantity: 1,
+      unit: 'ud',
+      storageLocation: 'fridge',
+      estimatedExpiryDays: 3,
+      expiryConfidence: 'medium',
+      confidence: 'manual',
+    );
+
+    final edited = await _showProductDialog(newProduct, title: 'Añadir producto');
+    if (edited != null) {
+      setState(() => _products.add(edited));
+    }
+  }
+
   Future<void> _editProduct(int index) async {
-    final product = _products[index];
+    final updated = await _showProductDialog(_products[index], title: 'Editar producto');
+    if (updated != null) {
+      setState(() => _products[index] = updated);
+    }
+  }
+
+  Future<DetectedProductModel?> _showProductDialog(DetectedProductModel product, {required String title}) async {
     final nameController = TextEditingController(text: product.name);
     final quantityController = TextEditingController(text: product.quantity.toString());
     final expiryController = TextEditingController(text: product.estimatedExpiryDays?.toString() ?? '');
+    final priceController = TextEditingController(text: product.price?.toStringAsFixed(2) ?? '');
 
-    final updated = await showDialog<DetectedProductModel>(
+    return showDialog<DetectedProductModel>(
       context: context,
       builder: (context) {
         String category = product.category;
         String storage = product.storageLocation;
         return AlertDialog(
-          title: const Text('Editar producto'),
+          title: Text(title),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -86,6 +115,12 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                   controller: expiryController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Días hasta caducar'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Precio del producto añadido (€)'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -127,13 +162,17 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
               onPressed: () {
                 final quantity = double.tryParse(quantityController.text.replaceAll(',', '.')) ?? product.quantity;
                 final expiryDays = int.tryParse(expiryController.text);
+                final price = double.tryParse(priceController.text.replaceAll(',', '.'));
+                final name = nameController.text.trim();
                 Navigator.of(context).pop(
                   product.copyWith(
-                    name: nameController.text.trim().isEmpty ? product.name : nameController.text.trim(),
+                    name: name.isEmpty ? product.name : name,
                     quantity: quantity,
                     category: category,
                     storageLocation: storage,
                     estimatedExpiryDays: expiryDays,
+                    price: price,
+                    confidence: product.confidence == 'manual' ? 'manual' : product.confidence,
                   ),
                 );
               },
@@ -143,10 +182,6 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
         );
       },
     );
-
-    if (updated != null) {
-      setState(() => _products[index] = updated);
-    }
   }
 
   void _removeProduct(int index) {
@@ -156,10 +191,19 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
   @override
   Widget build(BuildContext context) {
     final storeName = widget.analysis.store.name ?? 'Ticket detectado';
-    final total = widget.analysis.store.totalAmount;
+    final selectedTotal = _selectedProductsTotal;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Productos detectados')),
+      appBar: AppBar(
+        title: const Text('Productos detectados'),
+        actions: [
+          IconButton(
+            onPressed: _addProduct,
+            icon: const Icon(Icons.add_rounded),
+            tooltip: 'Añadir producto',
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -176,19 +220,34 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(storeName, style: const TextStyle(fontWeight: FontWeight.w900)),
-                        const Text('Revisa, edita o elimina antes de guardar', style: TextStyle(color: AppColors.textSecondary)),
+                        const Text('Revisa, edita, añade o elimina antes de guardar', style: TextStyle(color: AppColors.textSecondary)),
                         if (widget.analysis.store.purchaseDate != null)
                           Text('Fecha: ${widget.analysis.store.purchaseDate}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       ],
                     ),
                   ),
-                  if (total != null)
-                    Text('${total.toStringAsFixed(2)} €', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text('Total añadido', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      Text('${selectedTotal.toStringAsFixed(2)} €', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary)),
+                    ],
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 18),
-            Text('Productos de nevera (${_products.length})', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Productos de nevera (${_products.length})', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                TextButton.icon(
+                  onPressed: _addProduct,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Añadir'),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             if (widget.analysis.warnings.isNotEmpty)
               Container(
@@ -206,7 +265,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
               ),
             Expanded(
               child: _products.isEmpty
-                  ? const Center(child: Text('No se detectaron productos de nevera en este ticket.'))
+                  ? const Center(child: Text('No se detectaron productos de nevera. Puedes añadirlos manualmente.'))
                   : ListView.separated(
                       itemCount: _products.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -231,6 +290,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                                   children: [
                                     Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800)),
                                     Text('${item.quantityLabel} · ${_storageLabel(item.storageLocation)}', style: const TextStyle(color: AppColors.textSecondary)),
+                                    Text(item.priceLabel, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 12)),
                                     if (item.normalizedName != null && item.normalizedName != item.name)
                                       Text(item.normalizedName!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                                   ],
