@@ -45,6 +45,23 @@ def _estimate_expiry_date_from_added_date(days: int | None) -> str | None:
     return (date.today() + timedelta(days=days)).isoformat()
 
 
+def _insert_products_with_price_fallback(supabase: Client, product_rows: list[dict[str, Any]]):
+    """Insert products and tolerate projects that have not run the price migration yet."""
+    try:
+        return supabase.table("products").insert(product_rows).execute()
+    except Exception as exc:
+        message = str(exc)
+        if "price" not in message or "schema cache" not in message:
+            raise
+
+        fallback_rows = []
+        for row in product_rows:
+            clean_row = dict(row)
+            clean_row.pop("price", None)
+            fallback_rows.append(clean_row)
+        return supabase.table("products").insert(fallback_rows).execute()
+
+
 def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
     supabase = get_supabase_client()
 
@@ -90,7 +107,7 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
 
     products_saved = 0
     if product_rows:
-        products_result = supabase.table("products").insert(product_rows).execute()
+        products_result = _insert_products_with_price_fallback(supabase, product_rows)
         products_saved = len(products_result.data or [])
         for saved_product in products_result.data or []:
             event_rows.append(
