@@ -37,7 +37,11 @@ class AuthService {
   }) async {
     final client = _client;
     if (client == null) return;
-    await client.auth.signUp(email: email, password: password);
+    await client.auth.signUp(
+      email: email,
+      password: password,
+      emailRedirectTo: ApiConstants.authRedirectUrl,
+    );
   }
 
   Future<void> signInWithGoogle() async {

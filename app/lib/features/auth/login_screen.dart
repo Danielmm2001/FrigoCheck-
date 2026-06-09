@@ -44,6 +44,32 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  String _friendlyAuthError(Object error) {
+    final message = error.toString().toLowerCase();
+
+    if (message.contains('email not confirmed') || message.contains('confirm')) {
+      return 'Revisa tu correo y confirma la cuenta antes de entrar.';
+    }
+
+    if (message.contains('invalid login credentials') || message.contains('invalid_credentials')) {
+      return 'Correo o contrasena incorrectos.';
+    }
+
+    if (message.contains('already registered') || message.contains('user already')) {
+      return 'Ya existe una cuenta con ese correo. Prueba a iniciar sesion.';
+    }
+
+    if (message.contains('provider is not enabled') || message.contains('provider not enabled')) {
+      return 'El acceso con Google aun no esta disponible.';
+    }
+
+    if (message.contains('network') || message.contains('socket') || message.contains('timeout')) {
+      return 'No se pudo conectar. Revisa tu conexion e intentalo de nuevo.';
+    }
+
+    return 'No se pudo completar la accion. Intentalo de nuevo.';
+  }
+
   Future<void> _goHomeAfterRealSession({
     String? pendingMessage,
     bool allowDemo = false,
@@ -74,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } catch (error) {
       if (!mounted) return;
-      _showMessage(error.toString());
+      _showMessage(_friendlyAuthError(error));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -113,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await _runAuthAction(
       () => _authService.signUpWithEmail(email: email, password: password),
-      pendingMessage: 'Cuenta creada. Si Supabase pide confirmacion, revisa tu correo antes de entrar.',
+      pendingMessage: 'Cuenta creada. Revisa tu correo para confirmarla antes de entrar.',
     );
   }
 
