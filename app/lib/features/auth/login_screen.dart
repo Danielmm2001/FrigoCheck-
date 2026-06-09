@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../data/services/auth_service.dart';
 import '../home/home_screen.dart';
@@ -328,17 +329,8 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 32),
-              const Center(
-                child: Text(
-                  'FrigoCheck',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 52),
+              const Center(child: AppLogo(height: 54, centered: true)),
+              const SizedBox(height: 48),
               const Text(
                 'Iniciar sesion',
                 style: TextStyle(
