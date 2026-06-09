@@ -19,13 +19,22 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = const AuthService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _resetEmailController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
   StreamSubscription<AuthState>? _authSubscription;
   bool _isLoading = false;
+  bool _isPasswordRecovery = false;
 
   @override
   void initState() {
     super.initState();
     _authSubscription = _authService.authStateChanges?.listen((state) {
+      if (state.event == AuthChangeEvent.passwordRecovery) {
+        _isPasswordRecovery = true;
+        _showPasswordResetDialog();
+        return;
+      }
+
       if (state.session?.user != null) {
         _goHomeAfterRealSession();
       }
@@ -37,6 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
     _authSubscription?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
+    _resetEmailController.dispose();
+    _newPasswordController.dispose();
     super.dispose();
   }
 
@@ -49,6 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (message.contains('email not confirmed') || message.contains('confirm')) {
       return 'Revisa tu correo y confirma la cuenta antes de entrar.';
+    }
+
+    if (message.contains('password')) {
+      return 'No se pudo actualizar la contrasena. Revisa los datos e intentalo de nuevo.';
     }
 
     if (message.contains('invalid login credentials') || message.contains('invalid_credentials')) {
@@ -75,6 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
     bool allowDemo = false,
   }) async {
     if (!mounted) return;
+
+    if (_isPasswordRecovery) {
+      return;
+    }
 
     if (_authService.hasActiveSession || allowDemo) {
       Navigator.of(context).pushReplacement(
@@ -140,6 +159,116 @@ class _LoginScreenState extends State<LoginScreen> {
     await _runAuthAction(
       () => _authService.signUpWithEmail(email: email, password: password),
       pendingMessage: 'Cuenta creada. Revisa tu correo para confirmarla antes de entrar.',
+    );
+  }
+
+  Future<void> _sendPasswordResetEmail() async {
+    final email = _resetEmailController.text.trim();
+
+    if (!_authService.isConfigured) {
+      _showMessage('La recuperacion de contrasena no esta disponible en modo demo.');
+      return;
+    }
+
+    if (email.isEmpty) {
+      _showMessage('Introduce tu correo electronico.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _showMessage('Te hemos enviado un enlace para cambiar la contrasena.');
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(_friendlyAuthError(error));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _showPasswordResetRequestDialog() async {
+    _resetEmailController.text = _emailController.text.trim();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Recuperar contrasena'),
+          content: TextField(
+            controller: _resetEmailController,
+            enabled: !_isLoading,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.email_outlined),
+              hintText: 'Correo electronico',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: _isLoading ? null : () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: _isLoading ? null : _sendPasswordResetEmail,
+              child: const Text('Enviar enlace'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateRecoveredPassword() async {
+    final password = _newPasswordController.text;
+
+    if (password.length < 6) {
+      _showMessage('La contrasena debe tener al menos 6 caracteres');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _authService.updatePassword(password);
+      if (!mounted) return;
+      _isPasswordRecovery = false;
+      Navigator.of(context).pop();
+      _showMessage('Contrasena actualizada correctamente.');
+      await _goHomeAfterRealSession();
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(_friendlyAuthError(error));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _showPasswordResetDialog() async {
+    _newPasswordController.clear();
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Nueva contrasena'),
+          content: TextField(
+            controller: _newPasswordController,
+            enabled: !_isLoading,
+            obscureText: true,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.lock_outline),
+              hintText: 'Nueva contrasena',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: _isLoading ? null : _updateRecoveredPassword,
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -249,10 +378,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text('Crear cuenta'),
                 ),
               ),
-              const Center(
+              Center(
                 child: TextButton(
-                  onPressed: null,
-                  child: Text('Recuperar contrasena'),
+                  onPressed: _showPasswordResetRequestDialog,
+                  child: const Text('Recuperar contrasena'),
                 ),
               ),
             ],

@@ -53,6 +53,21 @@ class AuthService {
     );
   }
 
+  Future<void> sendPasswordResetEmail(String email) async {
+    final client = _client;
+    if (client == null) return;
+    await client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: ApiConstants.authRedirectUrl,
+    );
+  }
+
+  Future<void> updatePassword(String password) async {
+    final client = _client;
+    if (client == null) return;
+    await client.auth.updateUser(UserAttributes(password: password));
+  }
+
   Future<void> signOut() async {
     final client = _client;
     if (client == null) return;
