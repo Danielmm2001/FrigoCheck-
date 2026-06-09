@@ -55,8 +55,26 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+  }
+
   String _friendlyAuthError(Object error) {
     final message = error.toString().toLowerCase();
+
+    if (message.contains('invalid email') || message.contains('email address')) {
+      return 'Introduce un correo electronico valido.';
+    }
+
+    if (message.contains('rate limit') ||
+        message.contains('too many') ||
+        message.contains('security purposes')) {
+      return 'Espera unos minutos antes de pedir otro enlace.';
+    }
+
+    if (message.contains('redirect') || message.contains('not allowed')) {
+      return 'El enlace de recuperacion no esta configurado correctamente.';
+    }
 
     if (message.contains('email not confirmed') || message.contains('confirm')) {
       return 'Revisa tu correo y confirma la cuenta antes de entrar.';
@@ -139,6 +157,11 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    if (!_isValidEmail(email)) {
+      _showMessage('Introduce un correo electronico valido.');
+      return;
+    }
+
     await _runAuthAction(() => _authService.signInWithEmail(email: email, password: password));
   }
 
@@ -153,6 +176,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty || password.length < 6) {
       _showMessage('La contrasena debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (!_isValidEmail(email)) {
+      _showMessage('Introduce un correo electronico valido.');
       return;
     }
 
@@ -172,6 +200,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty) {
       _showMessage('Introduce tu correo electronico.');
+      return;
+    }
+
+    if (!_isValidEmail(email)) {
+      _showMessage('Introduce un correo electronico valido.');
       return;
     }
 
