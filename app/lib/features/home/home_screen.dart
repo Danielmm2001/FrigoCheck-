@@ -19,7 +19,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _api = const ApiService();
   final _auth = const AuthService();
-  late Future<_HomeData> _future = _load();
+  late Future<_HomeData> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
 
   Future<_HomeData> _load() async {
     final products = await _api.fetchProducts();
@@ -136,7 +142,7 @@ class _HomeData {
   const _HomeData(this.products, this.stats);
   final List<ProductModel> products;
   final StatsSummaryModel stats;
-  static const empty = _HomeData([], StatsSummaryModel.empty);
+  static const empty = _HomeData(<ProductModel>[], StatsSummaryModel.empty);
 }
 
 class _Metric extends StatelessWidget {

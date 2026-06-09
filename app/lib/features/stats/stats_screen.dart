@@ -13,7 +13,13 @@ class StatsScreen extends StatefulWidget {
 
 class _StatsScreenState extends State<StatsScreen> {
   final _api = const ApiService();
-  late Future<StatsSummaryModel> _future = _api.fetchStatsSummary();
+  late Future<StatsSummaryModel> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _api.fetchStatsSummary();
+  }
 
   void _refresh() => setState(() => _future = _api.fetchStatsSummary());
 
@@ -35,7 +41,7 @@ class _StatsScreenState extends State<StatsScreen> {
           }
 
           final stats = snapshot.data ?? StatsSummaryModel.empty;
-          final progress = stats.usagePercentage.clamp(0, 100) / 100;
+          final progress = stats.usagePercentage.clamp(0, 100).toDouble() / 100;
           final lostCount = stats.wastedCount + stats.expiredCount;
 
           return ListView(
