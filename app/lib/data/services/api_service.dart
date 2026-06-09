@@ -29,7 +29,8 @@ class ApiService {
       if (status != null) 'status': status,
     };
 
-    final uri = Uri.parse('${ApiConstants.baseUrl}/products').replace(queryParameters: queryParams);
+    final uri = Uri.parse('${ApiConstants.baseUrl}/products')
+        .replace(queryParameters: queryParams);
     final response = await http.get(uri, headers: _headers);
 
     if (response.statusCode != 200) {
@@ -38,7 +39,9 @@ class ApiService {
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final products = decoded['products'] as List<dynamic>? ?? [];
-    return products.map((item) => ProductModel.fromJson(item as Map<String, dynamic>)).toList();
+    return products
+        .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<StatsSummaryModel> fetchStatsSummary() async {
@@ -105,8 +108,14 @@ class ApiService {
     return _changeProductStatus(productId, 'waste');
   }
 
-  Future<ProductModel> _changeProductStatus(String productId, String action) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/products/$productId/$action').replace(
+  Future<ProductModel> markExpired(String productId) async {
+    return _changeProductStatus(productId, 'expire');
+  }
+
+  Future<ProductModel> _changeProductStatus(
+      String productId, String action) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/products/$productId/$action')
+        .replace(
       queryParameters: {'user_id': _userId},
     );
     final response = await http.post(uri, headers: _headers);

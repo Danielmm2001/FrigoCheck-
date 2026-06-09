@@ -94,9 +94,9 @@ class ProductModel {
       case 'consumed':
         return 'Consumido';
       case 'wasted':
-        return 'Tirado';
+        return 'Vencido';
       case 'expired':
-        return 'Caducado';
+        return 'Vencido';
       default:
         return status;
     }

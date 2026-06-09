@@ -49,8 +49,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _signOut() async {
     await _auth.signOut();
-    if (!mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  Future<void> _handleProfileAction(_ProfileAction action) async {
+    switch (action) {
+      case _ProfileAction.signOut:
+        await _signOut();
+        break;
+    }
   }
 
   @override
@@ -82,9 +88,31 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
-                      IconButton.filledTonal(
-                          onPressed: _signOut,
-                          icon: const Icon(Icons.person_rounded)),
+                      PopupMenuButton<_ProfileAction>(
+                        tooltip: 'Perfil',
+                        onSelected: _handleProfileAction,
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
+                            value: _ProfileAction.signOut,
+                            child: Row(
+                              children: [
+                                Icon(Icons.logout_rounded),
+                                SizedBox(width: 10),
+                                Text('Cerrar sesion'),
+                              ],
+                            ),
+                          ),
+                        ],
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: const Icon(Icons.person_rounded),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 28),
@@ -203,6 +231,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+enum _ProfileAction { signOut }
 
 class _HomeData {
   const _HomeData(

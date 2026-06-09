@@ -16,7 +16,14 @@ class FrigoCheckApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'FrigoCheck',
       theme: AppTheme.light(),
-      home: authService.currentUser == null ? const OnboardingScreen() : const HomeScreen(),
+      home: StreamBuilder(
+        stream: authService.authStateChanges,
+        builder: (context, _) {
+          return authService.currentUser == null
+              ? const OnboardingScreen()
+              : const HomeScreen();
+        },
+      ),
     );
   }
 }

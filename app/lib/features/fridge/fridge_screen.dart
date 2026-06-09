@@ -5,7 +5,7 @@ import '../../data/models/product_model.dart';
 import '../../data/models/receipt_analysis_model.dart';
 import '../../data/services/api_service.dart';
 
-enum _FridgeFilter { all, expiringSoon, consumed, wastedOrExpired }
+enum _FridgeFilter { all, expiringSoon, consumed, expired }
 
 class FridgeScreen extends StatefulWidget {
   const FridgeScreen({super.key});
@@ -49,9 +49,9 @@ class _FridgeScreenState extends State<FridgeScreen> {
         '${product.name} marcado como consumido');
   }
 
-  Future<void> _markWasted(ProductModel product) async {
-    await _runAction(() => _apiService.markWasted(product.id),
-        '${product.name} marcado como tirado');
+  Future<void> _markExpired(ProductModel product) async {
+    await _runAction(() => _apiService.markExpired(product.id),
+        '${product.name} marcado como vencido');
   }
 
   Future<void> _runAction(
@@ -81,7 +81,7 @@ class _FridgeScreenState extends State<FridgeScreen> {
       case _FridgeFilter.consumed:
         filtered = filtered.where((product) => product.status == 'consumed');
         break;
-      case _FridgeFilter.wastedOrExpired:
+      case _FridgeFilter.expired:
         filtered = filtered.where((product) =>
             product.status == 'wasted' ||
             product.status == 'expired' ||
@@ -297,11 +297,10 @@ class _FridgeScreenState extends State<FridgeScreen> {
                           () => _selectedFilter = _FridgeFilter.consumed)),
                   const SizedBox(width: 8),
                   _FilterChip(
-                      label: 'Tirados/Vencidos',
-                      selected:
-                          _selectedFilter == _FridgeFilter.wastedOrExpired,
-                      onTap: () => setState(() =>
-                          _selectedFilter = _FridgeFilter.wastedOrExpired)),
+                      label: 'Vencidos',
+                      selected: _selectedFilter == _FridgeFilter.expired,
+                      onTap: () => setState(
+                          () => _selectedFilter = _FridgeFilter.expired)),
                 ],
               ),
             ),
@@ -341,8 +340,8 @@ class _FridgeScreenState extends State<FridgeScreen> {
                         onConsumed: product.status == 'active'
                             ? () => _markConsumed(product)
                             : null,
-                        onWasted: product.status == 'active'
-                            ? () => _markWasted(product)
+                        onExpired: product.status == 'active'
+                            ? () => _markExpired(product)
                             : null,
                       );
                     },
@@ -367,12 +366,12 @@ class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.product,
     required this.onConsumed,
-    required this.onWasted,
+    required this.onExpired,
   });
 
   final ProductModel product;
   final VoidCallback? onConsumed;
-  final VoidCallback? onWasted;
+  final VoidCallback? onExpired;
 
   Color get _statusColor {
     if (product.status == 'consumed') return AppColors.success;
@@ -463,9 +462,9 @@ class _ProductCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: onWasted,
+                    onPressed: onExpired,
                     icon: const Icon(Icons.delete_outline_rounded),
-                    label: const Text('Tirado'),
+                    label: const Text('Vencido'),
                   ),
                 ),
               ],

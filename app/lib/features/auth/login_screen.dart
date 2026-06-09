@@ -7,7 +7,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../data/services/auth_service.dart';
-import '../home/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,7 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   bool _isValidEmail(String email) {
@@ -63,7 +63,8 @@ class _LoginScreenState extends State<LoginScreen> {
   String _friendlyAuthError(Object error) {
     final message = error.toString().toLowerCase();
 
-    if (message.contains('invalid email') || message.contains('email address')) {
+    if (message.contains('invalid email') ||
+        message.contains('email address')) {
       return 'Introduce un correo electronico valido.';
     }
 
@@ -77,7 +78,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return 'El enlace de recuperacion no esta configurado correctamente.';
     }
 
-    if (message.contains('email not confirmed') || message.contains('confirm')) {
+    if (message.contains('email not confirmed') ||
+        message.contains('confirm')) {
       return 'Revisa tu correo y confirma la cuenta antes de entrar.';
     }
 
@@ -85,19 +87,24 @@ class _LoginScreenState extends State<LoginScreen> {
       return 'No se pudo actualizar la contrasena. Revisa los datos e intentalo de nuevo.';
     }
 
-    if (message.contains('invalid login credentials') || message.contains('invalid_credentials')) {
+    if (message.contains('invalid login credentials') ||
+        message.contains('invalid_credentials')) {
       return 'Correo o contrasena incorrectos.';
     }
 
-    if (message.contains('already registered') || message.contains('user already')) {
+    if (message.contains('already registered') ||
+        message.contains('user already')) {
       return 'Ya existe una cuenta con ese correo. Prueba a iniciar sesion.';
     }
 
-    if (message.contains('provider is not enabled') || message.contains('provider not enabled')) {
+    if (message.contains('provider is not enabled') ||
+        message.contains('provider not enabled')) {
       return 'El acceso con Google aun no esta disponible.';
     }
 
-    if (message.contains('network') || message.contains('socket') || message.contains('timeout')) {
+    if (message.contains('network') ||
+        message.contains('socket') ||
+        message.contains('timeout')) {
       return 'No se pudo conectar. Revisa tu conexion e intentalo de nuevo.';
     }
 
@@ -115,13 +122,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (_authService.hasActiveSession || allowDemo) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      Navigator.of(context).popUntil((route) => route.isFirst);
       return;
     }
 
-    _showMessage(pendingMessage ?? 'No hay una sesion activa. Revisa el login e intentalo de nuevo.');
+    _showMessage(pendingMessage ??
+        'No hay una sesion activa. Revisa el login e intentalo de nuevo.');
   }
 
   Future<void> _runAuthAction(
@@ -163,7 +169,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await _runAuthAction(() => _authService.signInWithEmail(email: email, password: password));
+    await _runAuthAction(
+        () => _authService.signInWithEmail(email: email, password: password));
   }
 
   Future<void> _signUp() async {
@@ -187,7 +194,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await _runAuthAction(
       () => _authService.signUpWithEmail(email: email, password: password),
-      pendingMessage: 'Cuenta creada. Revisa tu correo para confirmarla antes de entrar.',
+      pendingMessage:
+          'Cuenta creada. Revisa tu correo para confirmarla antes de entrar.',
     );
   }
 
@@ -195,7 +203,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _resetEmailController.text.trim();
 
     if (!_authService.isConfigured) {
-      _showMessage('La recuperacion de contrasena no esta disponible en modo demo.');
+      _showMessage(
+          'La recuperacion de contrasena no esta disponible en modo demo.');
       return;
     }
 
@@ -241,7 +250,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: _isLoading ? null : () => Navigator.of(dialogContext).pop(),
+              onPressed:
+                  _isLoading ? null : () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancelar'),
             ),
             TextButton(
@@ -341,8 +351,11 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                authConfigured ? 'Accede para guardar y controlar tu nevera.' : 'Modo demo activo: configura Supabase para usar login real.',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 16),
+                authConfigured
+                    ? 'Accede para guardar y controlar tu nevera.'
+                    : 'Modo demo activo: configura Supabase para usar login real.',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 16),
               ),
               const SizedBox(height: 28),
               TextField(
@@ -376,7 +389,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   Expanded(child: Divider()),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('o', style: TextStyle(color: AppColors.textSecondary)),
+                    child: Text('o',
+                        style: TextStyle(color: AppColors.textSecondary)),
                   ),
                   Expanded(child: Divider()),
                 ],
@@ -387,12 +401,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 56,
                 child: OutlinedButton.icon(
                   onPressed: _isLoading ? null : _signInWithGoogle,
-                  icon: const Text('G', style: TextStyle(fontWeight: FontWeight.w900)),
+                  icon: const Text('G',
+                      style: TextStyle(fontWeight: FontWeight.w900)),
                   label: const Text('Continuar con Google'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textPrimary,
                     side: const BorderSide(color: Color(0xFFE5E7EB)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18)),
                   ),
                 ),
               ),

@@ -81,3 +81,18 @@ def waste_product(product_id: str, user_id: str = Query(...)):
         return {"status": "ok", "product": product}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/{product_id}/expire")
+def expire_product(product_id: str, user_id: str = Query(...)):
+    """Mark a product as expired."""
+    try:
+        product = mark_product_status(
+            product_id=product_id,
+            user_id=user_id,
+            status="expired",
+            event_type="expired",
+        )
+        return {"status": "ok", "product": product}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
