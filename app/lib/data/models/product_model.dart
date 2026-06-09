@@ -58,6 +58,8 @@ class ProductModel {
 
   bool get isExpiredActive => status == 'active' && (daysLeft ?? 9999) < 0;
 
+  bool get isPending => status == 'active' && !isExpiredActive;
+
   bool get isExpiringSoon {
     if (status != 'active') return false;
     final days = daysLeft;
@@ -65,7 +67,9 @@ class ProductModel {
   }
 
   String get quantityLabel {
-    final cleanQuantity = quantity % 1 == 0 ? quantity.toInt().toString() : quantity.toStringAsFixed(1);
+    final cleanQuantity = quantity % 1 == 0
+        ? quantity.toInt().toString()
+        : quantity.toStringAsFixed(1);
     return '$cleanQuantity $unit';
   }
 

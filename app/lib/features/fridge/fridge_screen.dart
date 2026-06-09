@@ -45,22 +45,27 @@ class _FridgeScreenState extends State<FridgeScreen> {
   }
 
   Future<void> _markConsumed(ProductModel product) async {
-    await _runAction(() => _apiService.markConsumed(product.id), '${product.name} marcado como consumido');
+    await _runAction(() => _apiService.markConsumed(product.id),
+        '${product.name} marcado como consumido');
   }
 
   Future<void> _markWasted(ProductModel product) async {
-    await _runAction(() => _apiService.markWasted(product.id), '${product.name} marcado como tirado');
+    await _runAction(() => _apiService.markWasted(product.id),
+        '${product.name} marcado como tirado');
   }
 
-  Future<void> _runAction(Future<ProductModel> Function() action, String successMessage) async {
+  Future<void> _runAction(
+      Future<ProductModel> Function() action, String successMessage) async {
     try {
       await action();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(successMessage)));
       _refreshProducts();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -71,13 +76,16 @@ class _FridgeScreenState extends State<FridgeScreen> {
       case _FridgeFilter.all:
         break;
       case _FridgeFilter.expiringSoon:
-        filtered = filtered.where((product) => product.isExpiringSoon);
+        filtered = filtered.where((product) => product.isPending);
         break;
       case _FridgeFilter.consumed:
         filtered = filtered.where((product) => product.status == 'consumed');
         break;
       case _FridgeFilter.wastedOrExpired:
-        filtered = filtered.where((product) => product.status == 'wasted' || product.status == 'expired' || product.isExpiredActive);
+        filtered = filtered.where((product) =>
+            product.status == 'wasted' ||
+            product.status == 'expired' ||
+            product.isExpiredActive);
         break;
     }
 
@@ -86,7 +94,9 @@ class _FridgeScreenState extends State<FridgeScreen> {
         final name = product.name.toLowerCase();
         final normalizedName = product.normalizedName?.toLowerCase() ?? '';
         final category = product.category.toLowerCase();
-        return name.contains(_searchQuery) || normalizedName.contains(_searchQuery) || category.contains(_searchQuery);
+        return name.contains(_searchQuery) ||
+            normalizedName.contains(_searchQuery) ||
+            category.contains(_searchQuery);
       });
     }
 
@@ -124,7 +134,8 @@ class _FridgeScreenState extends State<FridgeScreen> {
                 TextField(
                   controller: expiryController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Días hasta caducar'),
+                  decoration:
+                      const InputDecoration(labelText: 'Días hasta caducar'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -141,15 +152,23 @@ class _FridgeScreenState extends State<FridgeScreen> {
                     DropdownMenuItem(value: 'cheese', child: Text('Queso')),
                     DropdownMenuItem(value: 'yogurt', child: Text('Yogur')),
                     DropdownMenuItem(value: 'meat', child: Text('Carne')),
-                    DropdownMenuItem(value: 'poultry', child: Text('Pollo / ave')),
+                    DropdownMenuItem(
+                        value: 'poultry', child: Text('Pollo / ave')),
                     DropdownMenuItem(value: 'fish', child: Text('Pescado')),
                     DropdownMenuItem(value: 'seafood', child: Text('Marisco')),
                     DropdownMenuItem(value: 'eggs', child: Text('Huevos')),
-                    DropdownMenuItem(value: 'refrigerated_ready_meal', child: Text('Plato refrigerado')),
+                    DropdownMenuItem(
+                        value: 'refrigerated_ready_meal',
+                        child: Text('Plato refrigerado')),
                     DropdownMenuItem(value: 'frozen', child: Text('Congelado')),
-                    DropdownMenuItem(value: 'fruit', child: Text('Fruta refrigerada')),
-                    DropdownMenuItem(value: 'vegetables', child: Text('Verdura refrigerada')),
-                    DropdownMenuItem(value: 'other_refrigerated', child: Text('Otro refrigerado')),
+                    DropdownMenuItem(
+                        value: 'fruit', child: Text('Fruta refrigerada')),
+                    DropdownMenuItem(
+                        value: 'vegetables',
+                        child: Text('Verdura refrigerada')),
+                    DropdownMenuItem(
+                        value: 'other_refrigerated',
+                        child: Text('Otro refrigerado')),
                   ],
                   onChanged: (value) => category = value ?? category,
                 ),
@@ -159,7 +178,8 @@ class _FridgeScreenState extends State<FridgeScreen> {
                   decoration: const InputDecoration(labelText: 'Ubicación'),
                   items: const [
                     DropdownMenuItem(value: 'fridge', child: Text('Nevera')),
-                    DropdownMenuItem(value: 'freezer', child: Text('Congelador')),
+                    DropdownMenuItem(
+                        value: 'freezer', child: Text('Congelador')),
                   ],
                   onChanged: (value) => storage = value ?? storage,
                 ),
@@ -167,14 +187,19 @@ class _FridgeScreenState extends State<FridgeScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar')),
             ElevatedButton(
               onPressed: () {
                 final name = nameController.text.trim();
                 if (name.isEmpty) return;
-                final quantity = double.tryParse(quantityController.text.replaceAll(',', '.')) ?? 1;
+                final quantity = double.tryParse(
+                        quantityController.text.replaceAll(',', '.')) ??
+                    1;
                 final expiryDays = int.tryParse(expiryController.text) ?? 3;
-                final price = double.tryParse(priceController.text.replaceAll(',', '.'));
+                final price =
+                    double.tryParse(priceController.text.replaceAll(',', '.'));
                 Navigator.of(context).pop(
                   DetectedProductModel(
                     name: name,
@@ -215,11 +240,13 @@ class _FridgeScreenState extends State<FridgeScreen> {
         },
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto añadido a tu nevera')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Producto añadido a tu nevera')));
       _refreshProducts();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -251,13 +278,30 @@ class _FridgeScreenState extends State<FridgeScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _FilterChip(label: 'Todos', selected: _selectedFilter == _FridgeFilter.all, onTap: () => setState(() => _selectedFilter = _FridgeFilter.all)),
+                  _FilterChip(
+                      label: 'Todos',
+                      selected: _selectedFilter == _FridgeFilter.all,
+                      onTap: () =>
+                          setState(() => _selectedFilter = _FridgeFilter.all)),
                   const SizedBox(width: 8),
-                  _FilterChip(label: 'Por vencer', selected: _selectedFilter == _FridgeFilter.expiringSoon, onTap: () => setState(() => _selectedFilter = _FridgeFilter.expiringSoon)),
+                  _FilterChip(
+                      label: 'Por vencer',
+                      selected: _selectedFilter == _FridgeFilter.expiringSoon,
+                      onTap: () => setState(
+                          () => _selectedFilter = _FridgeFilter.expiringSoon)),
                   const SizedBox(width: 8),
-                  _FilterChip(label: 'Consumidos', selected: _selectedFilter == _FridgeFilter.consumed, onTap: () => setState(() => _selectedFilter = _FridgeFilter.consumed)),
+                  _FilterChip(
+                      label: 'Consumidos',
+                      selected: _selectedFilter == _FridgeFilter.consumed,
+                      onTap: () => setState(
+                          () => _selectedFilter = _FridgeFilter.consumed)),
                   const SizedBox(width: 8),
-                  _FilterChip(label: 'Tirados/Vencidos', selected: _selectedFilter == _FridgeFilter.wastedOrExpired, onTap: () => setState(() => _selectedFilter = _FridgeFilter.wastedOrExpired)),
+                  _FilterChip(
+                      label: 'Tirados/Vencidos',
+                      selected:
+                          _selectedFilter == _FridgeFilter.wastedOrExpired,
+                      onTap: () => setState(() =>
+                          _selectedFilter = _FridgeFilter.wastedOrExpired)),
                 ],
               ),
             ),
@@ -271,7 +315,9 @@ class _FridgeScreenState extends State<FridgeScreen> {
                   }
 
                   if (snapshot.hasError) {
-                    return _ErrorState(message: snapshot.error.toString(), onRetry: _refreshProducts);
+                    return _ErrorState(
+                        message: snapshot.error.toString(),
+                        onRetry: _refreshProducts);
                   }
 
                   final products = snapshot.data ?? [];
@@ -280,7 +326,9 @@ class _FridgeScreenState extends State<FridgeScreen> {
                     return const _EmptyState();
                   }
                   if (visibleProducts.isEmpty) {
-                    return const _EmptyState(message: 'No hay productos que coincidan con este filtro.');
+                    return const _EmptyState(
+                        message:
+                            'No hay productos que coincidan con este filtro.');
                   }
 
                   return ListView.separated(
@@ -290,8 +338,12 @@ class _FridgeScreenState extends State<FridgeScreen> {
                       final product = visibleProducts[index];
                       return _ProductCard(
                         product: product,
-                        onConsumed: product.status == 'active' ? () => _markConsumed(product) : null,
-                        onWasted: product.status == 'active' ? () => _markWasted(product) : null,
+                        onConsumed: product.status == 'active'
+                            ? () => _markConsumed(product)
+                            : null,
+                        onWasted: product.status == 'active'
+                            ? () => _markWasted(product)
+                            : null,
                       );
                     },
                   );
@@ -324,7 +376,9 @@ class _ProductCard extends StatelessWidget {
 
   Color get _statusColor {
     if (product.status == 'consumed') return AppColors.success;
-    if (product.status == 'wasted' || product.status == 'expired') return AppColors.danger;
+    if (product.status == 'wasted' || product.status == 'expired') {
+      return AppColors.danger;
+    }
 
     final days = product.daysLeft;
     if (days == null) return AppColors.secondary;
@@ -345,10 +399,12 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = _statusColor;
+    final isActive = product.status == 'active';
 
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+          color: Colors.white, borderRadius: BorderRadius.circular(20)),
       child: Column(
         children: [
           Row(
@@ -367,18 +423,28 @@ class _ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(product.name, style: const TextStyle(fontWeight: FontWeight.w900)),
-                    Text('${product.quantityLabel} · ${product.priceLabel}', style: const TextStyle(color: AppColors.textSecondary)),
+                    Text(product.name,
+                        style: const TextStyle(fontWeight: FontWeight.w900)),
+                    Text('${product.quantityLabel} · ${product.priceLabel}',
+                        style: const TextStyle(color: AppColors.textSecondary)),
                     if (product.notes != null && product.notes!.isNotEmpty)
-                      Text(product.notes!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      Text(product.notes!,
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 12)),
                   ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(product.daysLabel, style: TextStyle(color: statusColor, fontWeight: FontWeight.w900)),
-                  Text(_statusText, style: TextStyle(color: statusColor, fontSize: 12)),
+                  Text(
+                    isActive ? product.daysLabel : product.statusLabel,
+                    style: TextStyle(
+                        color: statusColor, fontWeight: FontWeight.w900),
+                  ),
+                  if (isActive)
+                    Text(_statusText,
+                        style: TextStyle(color: statusColor, fontSize: 12)),
                 ],
               ),
             ],
@@ -423,11 +489,15 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline_rounded, size: 54, color: AppColors.danger),
+          const Icon(Icons.error_outline_rounded,
+              size: 54, color: AppColors.danger),
           const SizedBox(height: 12),
-          const Text('No se pudieron cargar los productos', style: TextStyle(fontWeight: FontWeight.w900)),
+          const Text('No se pudieron cargar los productos',
+              style: TextStyle(fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 16),
           ElevatedButton(onPressed: onRetry, child: const Text('Reintentar')),
         ],
@@ -437,7 +507,8 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({this.message = 'Escanea un ticket para añadir productos.'});
+  const _EmptyState(
+      {this.message = 'Escanea un ticket para añadir productos.'});
 
   final String message;
 
@@ -449,9 +520,12 @@ class _EmptyState extends StatelessWidget {
         children: [
           const Icon(Icons.kitchen_rounded, size: 64, color: AppColors.primary),
           const SizedBox(height: 12),
-          const Text('Tu nevera está vacía', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+          const Text('Tu nevera está vacía',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
           const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -459,7 +533,8 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.onTap, this.selected = false});
+  const _FilterChip(
+      {required this.label, required this.onTap, this.selected = false});
 
   final String label;
   final VoidCallback onTap;
