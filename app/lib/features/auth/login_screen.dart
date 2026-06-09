@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/primary_button.dart';
@@ -16,26 +19,62 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = const AuthService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  StreamSubscription<AuthState>? _authSubscription;
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _authSubscription = _authService.authStateChanges?.listen((state) {
+      if (state.session?.user != null) {
+        _goHomeAfterRealSession();
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _authSubscription?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _runAuthAction(Future<void> Function() action) async {
-    setState(() => _isLoading = true);
-    try {
-      await action();
-      if (!mounted) return;
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _goHomeAfterRealSession({
+    String? pendingMessage,
+    bool allowDemo = false,
+  }) async {
+    if (!mounted) return;
+
+    if (_authService.hasActiveSession || allowDemo) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
+      return;
+    }
+
+    _showMessage(pendingMessage ?? 'No hay una sesion activa. Revisa el login e intentalo de nuevo.');
+  }
+
+  Future<void> _runAuthAction(
+    Future<void> Function() action, {
+    String? pendingMessage,
+    bool allowDemo = false,
+  }) async {
+    setState(() => _isLoading = true);
+    try {
+      await action();
+      await _goHomeAfterRealSession(
+        pendingMessage: pendingMessage,
+        allowDemo: allowDemo,
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      _showMessage(error.toString());
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -46,14 +85,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
 
     if (!_authService.isConfigured) {
-      await _runAuthAction(() async {});
+      await _runAuthAction(() async {}, allowDemo: true);
       return;
     }
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Introduce correo y contrasena')),
-      );
+      _showMessage('Introduce correo y contrasena');
       return;
     }
 
@@ -70,13 +107,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (email.isEmpty || password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La contrasena debe tener al menos 6 caracteres')),
-      );
+      _showMessage('La contrasena debe tener al menos 6 caracteres');
       return;
     }
 
-    await _runAuthAction(() => _authService.signUpWithEmail(email: email, password: password));
+    await _runAuthAction(
+      () => _authService.signUpWithEmail(email: email, password: password),
+      pendingMessage: 'Cuenta creada. Si Supabase pide confirmacion, revisa tu correo antes de entrar.',
+    );
   }
 
   Future<void> _signInWithGoogle() async {
@@ -84,7 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
       await _signIn();
       return;
     }
-    await _runAuthAction(_authService.signInWithGoogle);
+    await _runAuthAction(
+      _authService.signInWithGoogle,
+      pendingMessage: 'Completa Google en el navegador y vuelve a FrigoCheck.',
+    );
   }
 
   @override

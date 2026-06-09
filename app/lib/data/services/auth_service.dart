@@ -16,7 +16,11 @@ class AuthService {
 
   String get currentUserId => currentUser?.id ?? ApiConstants.demoUserId;
 
+  bool get hasActiveSession => currentUser != null;
+
   String? get accessToken => _client?.auth.currentSession?.accessToken;
+
+  Stream<AuthState>? get authStateChanges => _client?.auth.onAuthStateChange;
 
   Future<void> signInWithEmail({
     required String email,
@@ -39,7 +43,10 @@ class AuthService {
   Future<void> signInWithGoogle() async {
     final client = _client;
     if (client == null) return;
-    await client.auth.signInWithOAuth(OAuthProvider.google);
+    await client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: ApiConstants.authRedirectUrl,
+    );
   }
 
   Future<void> signOut() async {
