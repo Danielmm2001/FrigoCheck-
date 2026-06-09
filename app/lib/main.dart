@@ -10,7 +10,7 @@ Future<void> main() async {
   if (ApiConstants.hasSupabaseConfig) {
     await Supabase.initialize(
       url: ApiConstants.supabaseUrl,
-      anonKey: ApiConstants.supabaseAnonKey,
+      publishableKey: ApiConstants.supabaseAnonKey,
     );
   }
 

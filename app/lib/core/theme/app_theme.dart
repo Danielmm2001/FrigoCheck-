@@ -14,7 +14,7 @@ class AppTheme {
         seedColor: AppColors.primary,
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        background: AppColors.background,
+        surface: AppColors.background,
       ),
       textTheme: textTheme.apply(
         bodyColor: AppColors.textPrimary,

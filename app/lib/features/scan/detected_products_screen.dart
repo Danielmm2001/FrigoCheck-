@@ -95,7 +95,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
   }
 
   Future<void> _addProduct() async {
-    final newProduct = const DetectedProductModel(
+    const newProduct = DetectedProductModel(
       name: 'Nuevo producto',
       category: 'other_refrigerated',
       quantity: 1,
@@ -164,7 +164,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
-                    value: category,
+                    initialValue: category,
                     isExpanded: true,
                     decoration: _dialogDecoration('Categoría'),
                     items: const [
@@ -186,7 +186,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
-                    value: storage,
+                    initialValue: storage,
                     isExpanded: true,
                     decoration: _dialogDecoration('Ubicación'),
                     items: const [
@@ -299,7 +299,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: AppColors.warning.withOpacity(.12), borderRadius: BorderRadius.circular(18)),
+                decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: .12), borderRadius: BorderRadius.circular(18)),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -326,7 +326,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                               Container(
                                 width: 44,
                                 height: 44,
-                                decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(14)),
+                                decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(14)),
                                 child: Icon(_iconForCategory(item.category), color: color),
                               ),
                               const SizedBox(width: 12),

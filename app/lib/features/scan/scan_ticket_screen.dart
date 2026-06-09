@@ -122,7 +122,7 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
-                          color: AppColors.textPrimary.withOpacity(.72),
+                          color: AppColors.textPrimary.withValues(alpha: .72),
                           borderRadius: BorderRadius.circular(18),
                         ),
                         child: Text(
@@ -136,7 +136,7 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
                         width: double.infinity,
                         height: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(.45),
+                          color: Colors.black.withValues(alpha: .45),
                           borderRadius: BorderRadius.circular(28),
                         ),
                         child: const Column(

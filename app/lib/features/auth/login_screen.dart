@@ -182,10 +182,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text('Crear cuenta'),
                 ),
               ),
-              Center(
+              const Center(
                 child: TextButton(
                   onPressed: null,
-                  child: const Text('Recuperar contrasena'),
+                  child: Text('Recuperar contrasena'),
                 ),
               ),
             ],

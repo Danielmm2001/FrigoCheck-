@@ -134,7 +134,7 @@ class _FridgeScreenState extends State<FridgeScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: category,
+                  initialValue: category,
                   decoration: const InputDecoration(labelText: 'Categoría'),
                   items: const [
                     DropdownMenuItem(value: 'dairy', child: Text('Lácteos')),
@@ -155,7 +155,7 @@ class _FridgeScreenState extends State<FridgeScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: storage,
+                  initialValue: storage,
                   decoration: const InputDecoration(labelText: 'Ubicación'),
                   items: const [
                     DropdownMenuItem(value: 'fridge', child: Text('Nevera')),
@@ -357,7 +357,7 @@ class _ProductCard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(.12),
+                  color: statusColor.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(Icons.fastfood_rounded, color: statusColor),

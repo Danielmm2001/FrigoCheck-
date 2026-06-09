@@ -10,7 +10,7 @@ class FrigoCheckApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = const AuthService();
+    const authService = AuthService();
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
