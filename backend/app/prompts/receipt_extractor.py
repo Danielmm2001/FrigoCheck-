@@ -39,11 +39,19 @@ Devuelve este formato JSON:
   "warnings": ["string"]
 }
 
+Reglas de nombre limpio:
+- name y normalized_name deben ser nombres simples de producto, pensados para mostrarse en una tarjeta.
+- No incluyas peso, cantidad, unidades, formato ni pack en name o normalized_name.
+- Ejemplos correctos: "Pechuga de pollo", "Queso curado", "Yogur griego", "Lechuga", "Salmón".
+- Ejemplos incorrectos: "Pechuga pollo 500g", "Queso curado cuña 250g", "Yogur griego pack 4".
+- El peso/cantidad debe ir solo en quantity y unit.
+- Si una línea contiene marca o supermercado pero no ayuda a entender el producto, omítelo del nombre.
+
 Reglas generales:
 - Extrae solo productos reales.
 - Ignora descuentos, impuestos, métodos de pago, datos legales y mensajes promocionales.
 - Normaliza nombres abreviados sin cambiar el sentido del producto.
-- Si no estás seguro de la normalización, conserva el nombre original y usa confidence low o medium.
+- Si no estás seguro de la normalización, conserva el nombre original simplificado y usa confidence low o medium.
 - Si el total del ticket no es visible o no se puede leer con seguridad, usa total_amount: null.
 - Si la fecha no se ve clara, usa purchase_date: null.
 - No inventes datos que no aparezcan o no puedan deducirse con seguridad.
@@ -60,7 +68,7 @@ Regla principal de filtrado:
 - Incluye productos que normalmente se guardan en fridge o freezer.
 - Excluye productos que normalmente van en despensa o fuera de nevera aunque aparezcan en el ticket.
 - No incluyas pan, bollería seca, bebidas, agua, refrescos, cerveza, vino, sal, azúcar, café, cacao, frutos secos, snacks, patatas fritas, conservas, latas, pasta, arroz, aceite, vinagre, cereales, galletas, chocolate, salsas cerradas, ketchup o mayonesa cerrada.
-- Sí incluye verduras frescas de nevera como lechuga, espinacas, rúcula, canónigos, ensalada preparada, bolsa de ensalada, acelgas, brócoli, coliflor, champiñones, setas y verduras cortadas o en bandeja.
+- Sí incluye verduras frescas de nevera como lechuga, espinacas, rúcula, canónigos, ensalada preparada, acelgas, brócoli, coliflor, champiñones, setas y verduras cortadas o en bandeja.
 - Sí incluye fruta cortada o fruta preparada refrigerada. Fruta entera como plátano, naranja o manzana solo inclúyela si el usuario probablemente la refrigeraría o si es producto preparado/refrigerado.
 - Si dudas entre pantry y fridge, exclúyelo salvo que el nombre sugiera refrigerado o verdura fresca claramente perecedera.
 
