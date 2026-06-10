@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../../core/constants/api_constants.dart';
+import '../models/daily_stats_model.dart';
 import '../models/product_model.dart';
 import '../models/receipt_analysis_model.dart';
 import '../models/stats_summary_model.dart';
@@ -57,6 +58,24 @@ class ApiService {
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     return StatsSummaryModel.fromJson(decoded);
+  }
+
+  Future<DailyStatsModel> fetchDailyStats({required int year, required int month}) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/stats/daily').replace(
+      queryParameters: {
+        'user_id': _userId,
+        'year': year.toString(),
+        'month': month.toString(),
+      },
+    );
+    final response = await http.get(uri, headers: _headers);
+
+    if (response.statusCode != 200) {
+      throw Exception('Error cargando grafica: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return DailyStatsModel.fromJson(decoded);
   }
 
   Future<ReceiptAnalysisModel> analyzeReceiptImage(File imageFile) async {
