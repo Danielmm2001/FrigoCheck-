@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/app_route_observer.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/product_image.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/stats_summary_model.dart';
 import '../../data/services/api_service.dart';
@@ -17,10 +19,12 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen>
+    with WidgetsBindingObserver, RouteAware {
   final _api = const ApiService();
   final _auth = const AuthService();
   late Future<_HomeData> _future;
+  bool _routeSubscribed = false;
 
   @override
   void initState() {
@@ -31,11 +35,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (!_routeSubscribed && route is PageRoute<dynamic>) {
+      appRouteObserver.subscribe(this, route);
+      _routeSubscribed = true;
+    }
+  }
+
+  @override
   void dispose() {
+    if (_routeSubscribed) {
+      appRouteObserver.unsubscribe(this);
+    }
     WidgetsBinding.instance.removeObserver(this);
     inventoryVersion.removeListener(_refresh);
     super.dispose();
   }
+
+  @override
+  void didPush() => _refresh();
+
+  @override
+  void didPopNext() => _refresh();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -62,12 +85,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         statsError: statsError);
   }
 
-  void _refresh() => setState(() => _future = _load());
+  Future<void> _refresh() {
+    if (!mounted) return Future.value();
+    final nextLoad = _load();
+    setState(() => _future = nextLoad);
+    return nextLoad.then<void>((_) {}, onError: (_) {});
+  }
 
   Future<void> _openAndRefresh(Widget screen) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
     if (!mounted) return;
-    _refresh();
+    await _refresh();
   }
 
   Future<void> _signOut() async {
@@ -91,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           builder: (context, snapshot) {
             final data = snapshot.data ?? _HomeData.empty;
             return RefreshIndicator(
-              onRefresh: () async => _refresh(),
+              onRefresh: _refresh,
               child: ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
@@ -246,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           NavigationDestination(
               icon: Icon(Icons.kitchen_rounded), label: 'Nevera'),
           NavigationDestination(
-              icon: Icon(Icons.bar_chart_rounded), label: 'Stats'),
+              icon: Icon(Icons.person_rounded), label: 'Perfil'),
         ],
       ),
     );
@@ -333,7 +361,7 @@ class _ProductTile extends StatelessWidget {
       decoration: BoxDecoration(
           color: Colors.white, borderRadius: BorderRadius.circular(20)),
       child: Row(children: [
-        Icon(Icons.fastfood_rounded, color: color),
+        ProductImage(category: product.category, size: 44),
         const SizedBox(width: 12),
         Expanded(
             child: Text(product.name,
@@ -354,7 +382,7 @@ class _Notice extends StatelessWidget {
   final String text;
   final IconData icon;
   final Color color;
-  final VoidCallback? onRetry;
+  final Future<void> Function()? onRetry;
 
   @override
   Widget build(BuildContext context) {
