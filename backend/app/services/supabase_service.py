@@ -1,4 +1,6 @@
-from datetime import date, timedelta
+import calendar
+import re
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from supabase import Client, create_client
@@ -45,6 +47,22 @@ def _estimate_expiry_date_from_added_date(days: int | None) -> str | None:
     return (date.today() + timedelta(days=days)).isoformat()
 
 
+def _clean_product_name(value: str | None) -> str:
+    name = (value or "Producto").strip()
+    replacements = [
+        (r"\b\d+\s*[xX]\s*\d+([,.]\d+)?\s*(g|kg|ml|l|u|ud|uds|unidades|pcs)?\b", ""),
+        (r"\b\d+([,.]\d+)?\s*(g|kg|ml|l|u|ud|uds|unidades|pcs)\b", ""),
+        (r"\bpack\s*\d+\b", ""),
+        (r"\b\d+\s*pack\b", ""),
+        (r"\b\d+\s*(lonchas|filetes|piezas|unidades)\b", ""),
+    ]
+    for pattern, replacement in replacements:
+        name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
+    name = re.sub(r"\s+", " ", name)
+    name = re.sub(r"[\-·,]+$", "", name).strip()
+    return name or (value or "Producto").strip() or "Producto"
+
+
 def _insert_products_with_price_fallback(supabase: Client, product_rows: list[dict[str, Any]]):
     """Insert products and tolerate projects that have not run the price migration yet."""
     try:
@@ -86,12 +104,13 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
     added_date = date.today().isoformat()
     for product in payload.products:
         estimated_expiry_date = _estimate_expiry_date_from_added_date(product.estimated_expiry_days)
+        clean_name = _clean_product_name(product.normalized_name or product.name)
         product_rows.append(
             {
                 "user_id": payload.user_id,
                 "receipt_id": receipt_id,
-                "name": product.name,
-                "normalized_name": product.normalized_name,
+                "name": clean_name,
+                "normalized_name": clean_name.lower(),
                 "category": product.category,
                 "quantity": product.quantity,
                 "unit": product.unit,
@@ -163,6 +182,10 @@ def update_product_for_user(product_id: str, user_id: str, payload: UpdateProduc
 
     update_data = payload.model_dump(exclude_unset=True)
     update_data = {key: value for key, value in update_data.items() if key in EDITABLE_PRODUCT_FIELDS}
+    if "name" in update_data:
+        update_data["name"] = _clean_product_name(update_data["name"])
+    if "normalized_name" in update_data:
+        update_data["normalized_name"] = _clean_product_name(update_data["normalized_name"]).lower()
 
     if not update_data:
         raise RuntimeError("No valid fields to update")
@@ -282,7 +305,94 @@ def get_stats_summary_for_user(user_id: str) -> dict[str, Any]:
         "usage_percentage": usage_percentage,
         "estimated_savings": round(float(saved_value), 2),
         "estimated_waste": round(float(wasted_value), 2),
-        "current_streak": 0,
+        "current_streak": _calculate_current_streak(user_id=user_id),
         "score": score,
-        "level": "Nevera en control" if usage_percentage >= 80 else "Aprendiz anti-desperdicio",
+        "level": _level_for_score(score, usage_percentage),
+    }
+
+
+def _parse_event_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+    except ValueError:
+        return None
+
+
+def _events_for_user(user_id: str) -> list[dict[str, Any]]:
+    supabase = get_supabase_client()
+    result = (
+        supabase.table("product_events")
+        .select("event_type,event_date,product_id")
+        .eq("user_id", user_id)
+        .in_("event_type", ["consumed", "expired", "wasted"])
+        .execute()
+    )
+    return result.data or []
+
+
+def _calculate_current_streak(user_id: str) -> int:
+    events = _events_for_user(user_id)
+    consumed_dates = {
+        parsed
+        for event in events
+        if event.get("event_type") == "consumed"
+        for parsed in [_parse_event_date(event.get("event_date"))]
+        if parsed is not None
+    }
+    if not consumed_dates:
+        return 0
+
+    streak = 0
+    cursor = date.today()
+    while cursor in consumed_dates:
+        streak += 1
+        cursor -= timedelta(days=1)
+    return streak
+
+
+def _level_for_score(score: int, usage_percentage: int) -> str:
+    if score >= 500 and usage_percentage >= 85:
+        return "Maestro FrigoCheck"
+    if score >= 250 and usage_percentage >= 70:
+        return "Nevera en control"
+    if score >= 100:
+        return "Ahorrador constante"
+    return "Aprendiz anti-desperdicio"
+
+
+def get_daily_stats_for_user(user_id: str, year: int, month: int) -> dict[str, Any]:
+    products = {product.get("id"): product for product in list_products_for_user(user_id=user_id)}
+    days_in_month = calendar.monthrange(year, month)[1]
+    daily = {
+        day: {"date": date(year, month, day).isoformat(), "savings": 0.0, "waste": 0.0, "consumed_count": 0, "expired_count": 0}
+        for day in range(1, days_in_month + 1)
+    }
+
+    for event in _events_for_user(user_id):
+        event_date = _parse_event_date(event.get("event_date"))
+        if event_date is None or event_date.year != year or event_date.month != month:
+            continue
+        product = products.get(event.get("product_id"), {})
+        price = float(product.get("price") or 0)
+        bucket = daily[event_date.day]
+        if event.get("event_type") == "consumed":
+            bucket["savings"] += price
+            bucket["consumed_count"] += 1
+        elif event.get("event_type") in {"expired", "wasted"}:
+            bucket["waste"] += price
+            bucket["expired_count"] += 1
+
+    return {
+        "year": year,
+        "month": month,
+        "days": [
+            {
+                **value,
+                "savings": round(float(value["savings"]), 2),
+                "waste": round(float(value["waste"]), 2),
+            }
+            for value in daily.values()
+        ],
     }
