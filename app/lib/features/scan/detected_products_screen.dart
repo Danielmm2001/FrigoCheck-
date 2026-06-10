@@ -7,9 +7,14 @@ import '../../data/services/api_service.dart';
 import '../fridge/fridge_screen.dart';
 
 class DetectedProductsScreen extends StatefulWidget {
-  const DetectedProductsScreen({super.key, required this.analysis});
+  const DetectedProductsScreen({
+    super.key,
+    required this.analysis,
+    this.onProductsSaved,
+  });
 
   final ReceiptAnalysisModel analysis;
+  final VoidCallback? onProductsSaved;
 
   @override
   State<DetectedProductsScreen> createState() => _DetectedProductsScreenState();
@@ -96,8 +101,13 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Productos guardados en tu nevera')),
       );
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const FridgeScreen()));
+      if (widget.onProductsSaved != null) {
+        widget.onProductsSaved!();
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const FridgeScreen()));
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

@@ -5,6 +5,7 @@ import '../../core/widgets/product_image.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/receipt_analysis_model.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/inventory_events.dart';
 
 enum _FridgeFilter { all, expiringSoon, consumed, expired }
 
@@ -26,6 +27,7 @@ class _FridgeScreenState extends State<FridgeScreen> {
   void initState() {
     super.initState();
     _productsFuture = _apiService.fetchProducts();
+    inventoryVersion.addListener(_refreshProducts);
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim().toLowerCase();
@@ -35,11 +37,13 @@ class _FridgeScreenState extends State<FridgeScreen> {
 
   @override
   void dispose() {
+    inventoryVersion.removeListener(_refreshProducts);
     _searchController.dispose();
     super.dispose();
   }
 
   void _refreshProducts() {
+    if (!mounted) return;
     setState(() {
       _productsFuture = _apiService.fetchProducts();
     });

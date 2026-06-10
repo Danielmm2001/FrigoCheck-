@@ -8,9 +8,7 @@ import '../../data/models/stats_summary_model.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/inventory_events.dart';
-import '../fridge/fridge_screen.dart';
-import '../scan/scan_ticket_screen.dart';
-import '../stats/stats_screen.dart';
+import '../main/main_tabs.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -92,12 +90,6 @@ class _HomeScreenState extends State<HomeScreen>
       _future = nextLoad;
     });
     return nextLoad.then<void>((_) {}, onError: (_) {});
-  }
-
-  Future<void> _openAndRefresh(Widget screen) async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-    if (!mounted) return;
-    await _refresh();
   }
 
   Future<void> _signOut() async {
@@ -195,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen>
                     height: 58,
                     child: ElevatedButton.icon(
                       onPressed: () =>
-                          _openAndRefresh(const ScanTicketScreen()),
+                          MainTabsScope.select(context, MainTab.scan),
                       icon: const Icon(Icons.document_scanner_rounded),
                       label: const Text('Escanear ticket'),
                       style: ElevatedButton.styleFrom(
@@ -212,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen>
                               fontSize: 22, fontWeight: FontWeight.w900)),
                       TextButton(
                           onPressed: () =>
-                              _openAndRefresh(const FridgeScreen()),
+                              MainTabsScope.select(context, MainTab.fridge),
                           child: const Text('Ver todo')),
                     ],
                   ),
@@ -251,33 +243,6 @@ class _HomeScreenState extends State<HomeScreen>
             );
           },
         ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (index) {
-          if (index == 0) {
-            _refresh();
-          }
-          if (index == 1) {
-            _openAndRefresh(const ScanTicketScreen());
-          }
-          if (index == 2) {
-            _openAndRefresh(const FridgeScreen());
-          }
-          if (index == 3) {
-            _openAndRefresh(const StatsScreen());
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.home_rounded), label: 'Inicio'),
-          NavigationDestination(
-              icon: Icon(Icons.document_scanner_rounded), label: 'Escanear'),
-          NavigationDestination(
-              icon: Icon(Icons.kitchen_rounded), label: 'Nevera'),
-          NavigationDestination(
-              icon: Icon(Icons.person_rounded), label: 'Perfil'),
-        ],
       ),
     );
   }

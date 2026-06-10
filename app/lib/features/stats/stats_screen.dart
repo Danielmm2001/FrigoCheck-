@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../data/models/daily_stats_model.dart';
 import '../../data/models/stats_summary_model.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/inventory_events.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -20,7 +21,14 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   void initState() {
     super.initState();
+    inventoryVersion.addListener(_refresh);
     _future = _load();
+  }
+
+  @override
+  void dispose() {
+    inventoryVersion.removeListener(_refresh);
+    super.dispose();
   }
 
   Future<_ProfileData> _load() async {
@@ -30,7 +38,12 @@ class _StatsScreenState extends State<StatsScreen> {
     return _ProfileData(stats: stats, daily: daily);
   }
 
-  void _refresh() => setState(() => _future = _load());
+  void _refresh() {
+    if (!mounted) return;
+    setState(() {
+      _future = _load();
+    });
+  }
 
   void _changeMonth(int offset) {
     setState(() {

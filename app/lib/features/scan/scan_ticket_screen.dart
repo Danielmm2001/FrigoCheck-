@@ -9,7 +9,9 @@ import '../../data/services/api_service.dart';
 import 'detected_products_screen.dart';
 
 class ScanTicketScreen extends StatefulWidget {
-  const ScanTicketScreen({super.key});
+  const ScanTicketScreen({super.key, this.onProductsSaved});
+
+  final VoidCallback? onProductsSaved;
 
   @override
   State<ScanTicketScreen> createState() => _ScanTicketScreenState();
@@ -51,7 +53,10 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => DetectedProductsScreen(analysis: analysis),
+          builder: (_) => DetectedProductsScreen(
+            analysis: analysis,
+            onProductsSaved: widget.onProductsSaved,
+          ),
         ),
       );
     } catch (error) {
