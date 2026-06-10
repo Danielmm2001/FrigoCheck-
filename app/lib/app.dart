@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/navigation/app_route_observer.dart';
 import 'core/theme/app_theme.dart';
 import 'data/services/auth_service.dart';
 import 'features/home/home_screen.dart';
@@ -16,6 +17,7 @@ class FrigoCheckApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'FrigoCheck',
       theme: AppTheme.light(),
+      navigatorObservers: [appRouteObserver],
       home: StreamBuilder(
         stream: authService.authStateChanges,
         builder: (context, _) {
