@@ -16,7 +16,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _api = const ApiService();
   final _auth = const AuthService();
   late Future<_HomeData> _future;
@@ -24,7 +24,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _future = _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _refresh();
+    }
   }
 
   Future<_HomeData> _load() async {
@@ -46,6 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _refresh() => setState(() => _future = _load());
+
+  Future<void> _openAndRefresh(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    if (!mounted) return;
+    _refresh();
+  }
 
   Future<void> _signOut() async {
     await _auth.signOut();
@@ -141,9 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(
                     height: 58,
                     child: ElevatedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const ScanTicketScreen())),
+                      onPressed: () =>
+                          _openAndRefresh(const ScanTicketScreen()),
                       icon: const Icon(Icons.document_scanner_rounded),
                       label: const Text('Escanear ticket'),
                       style: ElevatedButton.styleFrom(
@@ -159,9 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                               fontSize: 22, fontWeight: FontWeight.w900)),
                       TextButton(
-                          onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const FridgeScreen())),
+                          onPressed: () =>
+                              _openAndRefresh(const FridgeScreen()),
                           child: const Text('Ver todo')),
                     ],
                   ),
@@ -204,17 +222,17 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: 0,
         onDestinationSelected: (index) {
+          if (index == 0) {
+            _refresh();
+          }
           if (index == 1) {
-            Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ScanTicketScreen()));
+            _openAndRefresh(const ScanTicketScreen());
           }
           if (index == 2) {
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const FridgeScreen()));
+            _openAndRefresh(const FridgeScreen());
           }
           if (index == 3) {
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const StatsScreen()));
+            _openAndRefresh(const StatsScreen());
           }
         },
         destinations: const [
