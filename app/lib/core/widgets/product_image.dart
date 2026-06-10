@@ -53,29 +53,40 @@ class _ProductVisualSpec {
   static _ProductVisualSpec forCategory(String category) {
     switch (category) {
       case 'poultry':
-        return const _ProductVisualSpec(icon: Icons.set_meal_rounded, color: Color(0xFFE85D75));
+        return const _ProductVisualSpec(
+            icon: Icons.set_meal_rounded, color: Color(0xFFE85D75));
       case 'meat':
-        return const _ProductVisualSpec(icon: Icons.lunch_dining_rounded, color: Color(0xFFEF4444));
+        return const _ProductVisualSpec(
+            icon: Icons.lunch_dining_rounded, color: Color(0xFFEF4444));
       case 'fish':
       case 'seafood':
-        return const _ProductVisualSpec(icon: Icons.water_rounded, color: Color(0xFF38BDF8));
+        return const _ProductVisualSpec(
+            icon: Icons.water_rounded, color: Color(0xFF38BDF8));
       case 'cheese':
-        return const _ProductVisualSpec(icon: Icons.category_rounded, color: Color(0xFFF59E0B));
+        return const _ProductVisualSpec(
+            icon: Icons.category_rounded, color: Color(0xFFF59E0B));
       case 'yogurt':
       case 'dairy':
-        return const _ProductVisualSpec(icon: Icons.local_drink_rounded, color: Color(0xFF60A5FA));
+        return const _ProductVisualSpec(
+            icon: Icons.local_drink_rounded, color: Color(0xFF60A5FA));
       case 'eggs':
-        return const _ProductVisualSpec(icon: Icons.egg_alt_rounded, color: Color(0xFFFBBF24));
+        return const _ProductVisualSpec(
+            icon: Icons.egg_alt_rounded, color: Color(0xFFFBBF24));
       case 'fruit':
-        return const _ProductVisualSpec(icon: Icons.local_florist_rounded, color: Color(0xFFFB7185));
+        return const _ProductVisualSpec(
+            icon: Icons.local_florist_rounded, color: Color(0xFFFB7185));
       case 'vegetables':
-        return const _ProductVisualSpec(icon: Icons.eco_rounded, color: AppColors.success);
+        return const _ProductVisualSpec(
+            icon: Icons.eco_rounded, color: AppColors.success);
       case 'frozen':
-        return const _ProductVisualSpec(icon: Icons.ac_unit_rounded, color: AppColors.secondary);
+        return const _ProductVisualSpec(
+            icon: Icons.ac_unit_rounded, color: AppColors.secondary);
       case 'refrigerated_ready_meal':
-        return const _ProductVisualSpec(icon: Icons.ramen_dining_rounded, color: Color(0xFF8B5CF6));
+        return const _ProductVisualSpec(
+            icon: Icons.ramen_dining_rounded, color: Color(0xFF8B5CF6));
       default:
-        return const _ProductVisualSpec(icon: Icons.fastfood_rounded, color: AppColors.primary);
+        return const _ProductVisualSpec(
+            icon: Icons.fastfood_rounded, color: AppColors.primary);
     }
   }
 }

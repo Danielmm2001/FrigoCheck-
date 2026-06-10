@@ -46,7 +46,8 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
     setState(() => _isAnalyzing = true);
 
     try {
-      final ReceiptAnalysisModel analysis = await _apiService.analyzeReceiptImage(image);
+      final ReceiptAnalysisModel analysis =
+          await _apiService.analyzeReceiptImage(image);
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -56,7 +57,7 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())) ,
+        SnackBar(content: Text(error.toString())),
       );
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
@@ -88,21 +89,26 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: AppColors.primary, width: 3),
+                          border:
+                              Border.all(color: AppColors.primary, width: 3),
                         ),
                         child: const Padding(
                           padding: EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('SELECCIONA UN TICKET', style: TextStyle(fontWeight: FontWeight.w900)),
+                              Text('SELECCIONA UN TICKET',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w900)),
                               Divider(),
                               Text('1. Pulsa importar foto'),
                               Text('2. Elige un ticket'),
                               Text('3. Analízalo con IA'),
                               Spacer(),
                               Divider(),
-                              Text('FrigoCheck lo convertirá en productos', style: TextStyle(fontWeight: FontWeight.w700)),
+                              Text('FrigoCheck lo convertirá en productos',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w700)),
                             ],
                           ),
                         ),
@@ -120,13 +126,16 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
                     Positioned(
                       top: 22,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
                           color: AppColors.textPrimary.withValues(alpha: .72),
                           borderRadius: BorderRadius.circular(18),
                         ),
                         child: Text(
-                          _selectedImage == null ? 'Selecciona una foto del ticket' : 'Ticket listo para analizar',
+                          _selectedImage == null
+                              ? 'Selecciona una foto del ticket'
+                              : 'Ticket listo para analizar',
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
@@ -144,7 +153,10 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
                           children: [
                             CircularProgressIndicator(color: Colors.white),
                             SizedBox(height: 18),
-                            Text('Analizando ticket con IA...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                            Text('Analizando ticket con IA...',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800)),
                           ],
                         ),
                       ),
@@ -157,7 +169,9 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _isAnalyzing ? null : () => _pickImage(ImageSource.gallery),
+                    onPressed: _isAnalyzing
+                        ? null
+                        : () => _pickImage(ImageSource.gallery),
                     icon: const Icon(Icons.photo_library_outlined),
                     label: const Text('Importar foto'),
                   ),
@@ -165,7 +179,9 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _isAnalyzing ? null : () => _pickImage(ImageSource.camera),
+                    onPressed: _isAnalyzing
+                        ? null
+                        : () => _pickImage(ImageSource.camera),
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: const Text('Cámara'),
                   ),
@@ -181,7 +197,11 @@ class _ScanTicketScreenState extends State<ScanTicketScreen> {
                 foregroundColor: Colors.white,
                 onPressed: _isAnalyzing ? null : _analyzeSelectedImage,
                 child: _isAnalyzing
-                    ? const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                    ? const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 3))
                     : const Icon(Icons.document_scanner_rounded, size: 34),
               ),
             ),

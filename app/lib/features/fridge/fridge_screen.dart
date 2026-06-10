@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/product_image.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/receipt_analysis_model.dart';
 import '../../data/services/api_service.dart';
@@ -408,15 +409,7 @@ class _ProductCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(Icons.fastfood_rounded, color: statusColor),
-              ),
+              ProductImage(category: product.category, size: 52),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

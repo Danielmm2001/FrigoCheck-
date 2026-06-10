@@ -15,7 +15,9 @@ class OnboardingScreen extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: MediaQuery.sizeOf(context).height - MediaQuery.paddingOf(context).vertical - 48,
+              minHeight: MediaQuery.sizeOf(context).height -
+                  MediaQuery.paddingOf(context).vertical -
+                  48,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -31,7 +33,8 @@ class OnboardingScreen extends StatelessWidget {
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.kitchen_rounded, color: Colors.white),
+                      child: const Icon(Icons.kitchen_rounded,
+                          color: Colors.white),
                     ),
                     const SizedBox(width: 12),
                     const Text(

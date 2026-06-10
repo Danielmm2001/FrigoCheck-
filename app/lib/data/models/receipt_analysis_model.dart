@@ -115,7 +115,9 @@ class DetectedProductModel {
   }
 
   String get quantityLabel {
-    final cleanQuantity = quantity % 1 == 0 ? quantity.toInt().toString() : quantity.toStringAsFixed(1);
+    final cleanQuantity = quantity % 1 == 0
+        ? quantity.toInt().toString()
+        : quantity.toStringAsFixed(1);
     return '$cleanQuantity $unit';
   }
 
@@ -152,7 +154,10 @@ class ReceiptAnalysisModel {
 
     return ReceiptAnalysisModel(
       store: ReceiptStoreModel.fromJson(json['store'] as Map<String, dynamic>?),
-      products: rawProducts.map((item) => DetectedProductModel.fromJson(item as Map<String, dynamic>)).toList(),
+      products: rawProducts
+          .map((item) =>
+              DetectedProductModel.fromJson(item as Map<String, dynamic>))
+          .toList(),
       warnings: rawWarnings.map((item) => item.toString()).toList(),
       rawJson: json,
     );

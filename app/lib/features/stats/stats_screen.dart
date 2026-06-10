@@ -25,7 +25,8 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Future<_ProfileData> _load() async {
     final stats = await _api.fetchStatsSummary();
-    final daily = await _api.fetchDailyStats(year: _selectedMonth.year, month: _selectedMonth.month);
+    final daily = await _api.fetchDailyStats(
+        year: _selectedMonth.year, month: _selectedMonth.month);
     return _ProfileData(stats: stats, daily: daily);
   }
 
@@ -33,7 +34,8 @@ class _StatsScreenState extends State<StatsScreen> {
 
   void _changeMonth(int offset) {
     setState(() {
-      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + offset);
+      _selectedMonth =
+          DateTime(_selectedMonth.year, _selectedMonth.month + offset);
       _future = _load();
     });
   }
@@ -43,7 +45,10 @@ class _StatsScreenState extends State<StatsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Perfil'),
-        actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
+        actions: [
+          IconButton(
+              onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))
+        ],
       ),
       body: FutureBuilder<_ProfileData>(
         future: _future,
@@ -52,7 +57,8 @@ class _StatsScreenState extends State<StatsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return _ErrorState(message: snapshot.error.toString(), onRetry: _refresh);
+            return _ErrorState(
+                message: snapshot.error.toString(), onRetry: _refresh);
           }
 
           final data = snapshot.data ?? _ProfileData.empty;
@@ -68,15 +74,31 @@ class _StatsScreenState extends State<StatsScreen> {
                 _ProfileHeader(stats: stats, rank: rank),
                 const SizedBox(height: 16),
                 Row(children: [
-                  _Metric(title: 'Ahorro', value: '${stats.estimatedSavings.toStringAsFixed(2)} EUR', icon: Icons.savings_rounded, color: AppColors.success),
+                  _Metric(
+                      title: 'Ahorro',
+                      value: '${stats.estimatedSavings.toStringAsFixed(2)} EUR',
+                      icon: Icons.savings_rounded,
+                      color: AppColors.success),
                   const SizedBox(width: 10),
-                  _Metric(title: 'Perdida', value: '${stats.estimatedWaste.toStringAsFixed(2)} EUR', icon: Icons.money_off_rounded, color: AppColors.danger),
+                  _Metric(
+                      title: 'Perdida',
+                      value: '${stats.estimatedWaste.toStringAsFixed(2)} EUR',
+                      icon: Icons.money_off_rounded,
+                      color: AppColors.danger),
                 ]),
                 const SizedBox(height: 10),
                 Row(children: [
-                  _Metric(title: 'Consumidos', value: stats.consumedCount.toString(), icon: Icons.check_circle_rounded, color: AppColors.primary),
+                  _Metric(
+                      title: 'Consumidos',
+                      value: stats.consumedCount.toString(),
+                      icon: Icons.check_circle_rounded,
+                      color: AppColors.primary),
                   const SizedBox(width: 10),
-                  _Metric(title: 'Vencidos', value: lostCount.toString(), icon: Icons.warning_rounded, color: AppColors.warning),
+                  _Metric(
+                      title: 'Vencidos',
+                      value: lostCount.toString(),
+                      icon: Icons.warning_rounded,
+                      color: AppColors.warning),
                 ]),
                 const SizedBox(height: 16),
                 _StreakPanel(streak: stats.currentStreak),
@@ -104,7 +126,8 @@ class _ProfileData {
   final StatsSummaryModel stats;
   final DailyStatsModel daily;
 
-  static final empty = _ProfileData(stats: StatsSummaryModel.empty, daily: DailyStatsModel.empty);
+  static final empty = _ProfileData(
+      stats: StatsSummaryModel.empty, daily: DailyStatsModel.empty);
 }
 
 class _ProfileHeader extends StatelessWidget {
@@ -136,20 +159,35 @@ class _ProfileHeader extends StatelessWidget {
               ),
             ),
             Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('${stats.usagePercentage}%', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-              const Text('uso', style: TextStyle(color: Colors.white, fontSize: 11)),
+              Text('${stats.usagePercentage}%',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900)),
+              const Text('uso',
+                  style: TextStyle(color: Colors.white, fontSize: 11)),
             ]),
           ]),
           const SizedBox(width: 18),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Dani', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Dani',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900)),
               const SizedBox(height: 4),
-              Text(rank.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+              Text(rank.title,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
               Text(
-                stats.usagePercentage >= 80 ? 'Tu nevera va muy controlada.' : 'Aun puedes rescatar mas productos antes de vencer.',
-                style: TextStyle(color: Colors.white.withValues(alpha: .86), height: 1.25),
+                stats.usagePercentage >= 80
+                    ? 'Tu nevera va muy controlada.'
+                    : 'Aun puedes rescatar mas productos antes de vencer.',
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: .86), height: 1.25),
               ),
             ]),
           ),
@@ -161,7 +199,11 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({required this.title, required this.value, required this.icon, required this.color});
+  const _Metric(
+      {required this.title,
+      required this.value,
+      required this.icon,
+      required this.color});
 
   final String title;
   final String value;
@@ -174,12 +216,19 @@ class _Metric extends StatelessWidget {
       child: Container(
         height: 118,
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
+        decoration: BoxDecoration(
+            color: Colors.white, borderRadius: BorderRadius.circular(22)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(icon, color: color),
           const Spacer(),
-          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-          Text(title, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          Text(title,
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 13)),
         ]),
       ),
     );
@@ -198,15 +247,29 @@ class _StreakPanel extends StatelessWidget {
         Container(
           width: 54,
           height: 54,
-          decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: .14), borderRadius: BorderRadius.circular(18)),
-          child: const Icon(Icons.local_fire_department_rounded, color: AppColors.warning),
+          decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(18)),
+          child: const Icon(Icons.local_fire_department_rounded,
+              color: AppColors.warning),
         ),
         const SizedBox(width: 14),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('En racha', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-          Text(streak == 0 ? 'Consume productos para empezar una racha.' : '$streak dias seguidos aprovechando productos.', style: const TextStyle(color: AppColors.textSecondary)),
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('En racha',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+              streak == 0
+                  ? 'Consume productos para empezar una racha.'
+                  : '$streak dias seguidos aprovechando productos.',
+              style: const TextStyle(color: AppColors.textSecondary)),
         ])),
-        Text('$streak', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.warning)),
+        Text('$streak',
+            style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: AppColors.warning)),
       ]),
     );
   }
@@ -221,33 +284,57 @@ class _RankPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final next = rank.next;
-    final progress = next == null ? 1.0 : ((score - rank.minScore) / (next.minScore - rank.minScore)).clamp(0, 1).toDouble();
+    final progress = next == null
+        ? 1.0
+        : ((score - rank.minScore) / (next.minScore - rank.minScore))
+            .clamp(0, 1)
+            .toDouble();
     return _Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           _Shield(rank: rank, size: 62),
           const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Ranking personal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 3),
-            Text(rank.title, style: TextStyle(color: rank.color, fontWeight: FontWeight.w900)),
-          ])),
-          Text('$score pts', style: const TextStyle(fontWeight: FontWeight.w900)),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                const Text('Ranking personal',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 3),
+                Text(rank.title,
+                    style: TextStyle(
+                        color: rank.color, fontWeight: FontWeight.w900)),
+              ])),
+          Text('$score pts',
+              style: const TextStyle(fontWeight: FontWeight.w900)),
         ]),
         const SizedBox(height: 16),
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(value: progress, minHeight: 10, color: rank.color, backgroundColor: rank.color.withValues(alpha: .14)),
+          child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              color: rank.color,
+              backgroundColor: rank.color.withValues(alpha: .14)),
         ),
         const SizedBox(height: 8),
-        Text(next == null ? 'Rango maximo alcanzado.' : '${next.minScore - score} puntos para ${next.title}.', style: const TextStyle(color: AppColors.textSecondary)),
+        Text(
+            next == null
+                ? 'Rango maximo alcanzado.'
+                : '${next.minScore - score} puntos para ${next.title}.',
+            style: const TextStyle(color: AppColors.textSecondary)),
       ]),
     );
   }
 }
 
 class _ChartPanel extends StatelessWidget {
-  const _ChartPanel({required this.month, required this.daily, required this.onPrevious, required this.onNext});
+  const _ChartPanel(
+      {required this.month,
+      required this.daily,
+      required this.onPrevious,
+      required this.onNext});
 
   final DateTime month;
   final DailyStatsModel daily;
@@ -256,30 +343,57 @@ class _ChartPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalSavings = daily.days.fold<double>(0, (sum, day) => sum + day.savings);
-    final totalWaste = daily.days.fold<double>(0, (sum, day) => sum + day.waste);
+    final totalSavings =
+        daily.days.fold<double>(0, (sum, day) => sum + day.savings);
+    final totalWaste =
+        daily.days.fold<double>(0, (sum, day) => sum + day.waste);
     return _Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Expanded(child: Text('Ahorro del mes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900))),
-          IconButton(onPressed: onPrevious, icon: const Icon(Icons.chevron_left_rounded)),
-          Text(_monthLabel(month), style: const TextStyle(fontWeight: FontWeight.w800)),
-          IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right_rounded)),
+          const Expanded(
+              child: Text('Ahorro del mes',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900))),
+          IconButton(
+              onPressed: onPrevious,
+              icon: const Icon(Icons.chevron_left_rounded)),
+          Text(_monthLabel(month),
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+          IconButton(
+              onPressed: onNext, icon: const Icon(Icons.chevron_right_rounded)),
         ]),
         const SizedBox(height: 8),
         SizedBox(height: 150, child: _MonthlyChart(days: daily.days)),
         const SizedBox(height: 14),
         Row(children: [
-          _Legend(color: AppColors.success, label: 'Ahorrado', value: '${totalSavings.toStringAsFixed(2)} EUR'),
+          _Legend(
+              color: AppColors.success,
+              label: 'Ahorrado',
+              value: '${totalSavings.toStringAsFixed(2)} EUR'),
           const SizedBox(width: 14),
-          _Legend(color: AppColors.danger, label: 'Perdido', value: '${totalWaste.toStringAsFixed(2)} EUR'),
+          _Legend(
+              color: AppColors.danger,
+              label: 'Perdido',
+              value: '${totalWaste.toStringAsFixed(2)} EUR'),
         ]),
       ]),
     );
   }
 
   String _monthLabel(DateTime value) {
-    const names = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const names = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic'
+    ];
     return '${names[value.month - 1]} ${value.year}';
   }
 }
@@ -296,20 +410,34 @@ class _MonthlyChart extends StatelessWidget {
       return value > max ? value : max;
     });
     if (days.isEmpty) {
-      return const Center(child: Text('Sin datos este mes', style: TextStyle(color: AppColors.textSecondary)));
+      return const Center(
+          child: Text('Sin datos este mes',
+              style: TextStyle(color: AppColors.textSecondary)));
     }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: days.map((day) {
-        final savingsHeight = (day.savings / maxValue * 112).clamp(3, 112).toDouble();
-        final wasteHeight = (day.waste / maxValue * 112).clamp(3, 112).toDouble();
+        final savingsHeight =
+            (day.savings / maxValue * 112).clamp(3, 112).toDouble();
+        final wasteHeight =
+            (day.waste / maxValue * 112).clamp(3, 112).toDouble();
         return Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-              Container(width: 5, height: wasteHeight, decoration: BoxDecoration(color: AppColors.danger.withValues(alpha: .72), borderRadius: BorderRadius.circular(999))),
+              Container(
+                  width: 5,
+                  height: wasteHeight,
+                  decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: .72),
+                      borderRadius: BorderRadius.circular(999))),
               const SizedBox(height: 2),
-              Container(width: 5, height: savingsHeight, decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(999))),
+              Container(
+                  width: 5,
+                  height: savingsHeight,
+                  decoration: BoxDecoration(
+                      color: AppColors.success,
+                      borderRadius: BorderRadius.circular(999))),
             ]),
           ),
         );
@@ -319,7 +447,8 @@ class _MonthlyChart extends StatelessWidget {
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label, required this.value});
+  const _Legend(
+      {required this.color, required this.label, required this.value});
 
   final Color color;
   final String label;
@@ -329,9 +458,15 @@ class _Legend extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Row(children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 7),
-        Expanded(child: Text('$label · $value', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(
+            child: Text('$label · $value',
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textSecondary))),
       ]),
     );
   }
@@ -347,7 +482,8 @@ class _Panel extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(
+          color: Colors.white, borderRadius: BorderRadius.circular(24)),
       child: child,
     );
   }
@@ -367,7 +503,12 @@ class _Shield extends StatelessWidget {
       decoration: BoxDecoration(
         color: rank.color,
         borderRadius: BorderRadius.circular(size * .32),
-        boxShadow: [BoxShadow(color: rank.color.withValues(alpha: .28), blurRadius: 16, offset: const Offset(0, 7))],
+        boxShadow: [
+          BoxShadow(
+              color: rank.color.withValues(alpha: .28),
+              blurRadius: 16,
+              offset: const Offset(0, 7))
+        ],
       ),
       child: Icon(rank.icon, color: Colors.white, size: size * .52),
     );
@@ -375,7 +516,11 @@ class _Shield extends StatelessWidget {
 }
 
 class _Rank {
-  const _Rank({required this.title, required this.minScore, required this.color, required this.icon});
+  const _Rank(
+      {required this.title,
+      required this.minScore,
+      required this.color,
+      required this.icon});
 
   final String title;
   final int minScore;
@@ -396,10 +541,26 @@ class _Rank {
   }
 
   static const _ranks = [
-    _Rank(title: 'Aprendiz anti-desperdicio', minScore: 0, color: AppColors.secondary, icon: Icons.eco_rounded),
-    _Rank(title: 'Ahorrador constante', minScore: 100, color: AppColors.primary, icon: Icons.savings_rounded),
-    _Rank(title: 'Nevera en control', minScore: 250, color: AppColors.warning, icon: Icons.workspace_premium_rounded),
-    _Rank(title: 'Maestro FrigoCheck', minScore: 500, color: Color(0xFF8B5CF6), icon: Icons.military_tech_rounded),
+    _Rank(
+        title: 'Aprendiz anti-desperdicio',
+        minScore: 0,
+        color: AppColors.secondary,
+        icon: Icons.eco_rounded),
+    _Rank(
+        title: 'Ahorrador constante',
+        minScore: 100,
+        color: AppColors.primary,
+        icon: Icons.savings_rounded),
+    _Rank(
+        title: 'Nevera en control',
+        minScore: 250,
+        color: AppColors.warning,
+        icon: Icons.workspace_premium_rounded),
+    _Rank(
+        title: 'Maestro FrigoCheck',
+        minScore: 500,
+        color: Color(0xFF8B5CF6),
+        icon: Icons.military_tech_rounded),
   ];
 }
 
@@ -414,11 +575,15 @@ class _ErrorState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.error_outline_rounded, size: 54, color: AppColors.danger),
+          const Icon(Icons.error_outline_rounded,
+              size: 54, color: AppColors.danger),
           const SizedBox(height: 12),
-          const Text('No se pudo cargar el perfil', style: TextStyle(fontWeight: FontWeight.w900)),
+          const Text('No se pudo cargar el perfil',
+              style: TextStyle(fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 16),
           ElevatedButton(onPressed: onRetry, child: const Text('Reintentar')),
         ]),

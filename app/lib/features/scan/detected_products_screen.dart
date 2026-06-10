@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/product_image.dart';
 import '../../data/models/receipt_analysis_model.dart';
 import '../../data/services/api_service.dart';
 import '../fridge/fridge_screen.dart';
@@ -26,7 +27,8 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
   }
 
   double get _selectedProductsTotal {
-    return _products.fold<double>(0, (total, product) => total + (product.price ?? 0));
+    return _products.fold<double>(
+        0, (total, product) => total + (product.price ?? 0));
   }
 
   String _numberInputValue(num? value) {
@@ -36,11 +38,20 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
   }
 
   String _cleanProductTitle(DetectedProductModel product) {
-    var title = (product.normalizedName?.trim().isNotEmpty ?? false) ? product.normalizedName!.trim() : product.name.trim();
+    var title = (product.normalizedName?.trim().isNotEmpty ?? false)
+        ? product.normalizedName!.trim()
+        : product.name.trim();
 
     title = title
-        .replaceAll(RegExp(r'\b\d+\s*[xX]\s*\d+([,.]\d+)?\s*(g|kg|ml|l|u|ud|uds|unidades|pcs)?\b', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\b\d+([,.]\d+)?\s*(g|kg|ml|l|u|ud|uds|unidades|pcs)\b', caseSensitive: false), '')
+        .replaceAll(
+            RegExp(
+                r'\b\d+\s*[xX]\s*\d+([,.]\d+)?\s*(g|kg|ml|l|u|ud|uds|unidades|pcs)?\b',
+                caseSensitive: false),
+            '')
+        .replaceAll(
+            RegExp(r'\b\d+([,.]\d+)?\s*(g|kg|ml|l|u|ud|uds|unidades|pcs)\b',
+                caseSensitive: false),
+            '')
         .replaceAll(RegExp(r'\bpack\s*\d+\b', caseSensitive: false), '')
         .replaceAll(RegExp(r'\b\d+\s*pack\b', caseSensitive: false), '')
         .replaceAll(RegExp(r'\s+'), ' ')
@@ -85,10 +96,12 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Productos guardados en tu nevera')),
       );
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const FridgeScreen()));
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const FridgeScreen()));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -106,24 +119,31 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
       confidence: 'manual',
     );
 
-    final edited = await _showProductDialog(newProduct, title: 'Añadir producto');
+    final edited =
+        await _showProductDialog(newProduct, title: 'Añadir producto');
     if (edited != null) {
       setState(() => _products.add(edited));
     }
   }
 
   Future<void> _editProduct(int index) async {
-    final updated = await _showProductDialog(_products[index], title: 'Editar producto');
+    final updated =
+        await _showProductDialog(_products[index], title: 'Editar producto');
     if (updated != null) {
       setState(() => _products[index] = updated);
     }
   }
 
-  Future<DetectedProductModel?> _showProductDialog(DetectedProductModel product, {required String title}) async {
-    final nameController = TextEditingController(text: _cleanProductTitle(product));
-    final quantityController = TextEditingController(text: _numberInputValue(product.quantity));
-    final expiryController = TextEditingController(text: _numberInputValue(product.estimatedExpiryDays));
-    final priceController = TextEditingController(text: product.price?.toStringAsFixed(2) ?? '');
+  Future<DetectedProductModel?> _showProductDialog(DetectedProductModel product,
+      {required String title}) async {
+    final nameController =
+        TextEditingController(text: _cleanProductTitle(product));
+    final quantityController =
+        TextEditingController(text: _numberInputValue(product.quantity));
+    final expiryController = TextEditingController(
+        text: _numberInputValue(product.estimatedExpiryDays));
+    final priceController =
+        TextEditingController(text: product.price?.toStringAsFixed(2) ?? '');
 
     return showDialog<DetectedProductModel>(
       context: context,
@@ -132,7 +152,8 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
         String storage = product.storageLocation;
         return AlertDialog(
           title: Text(title),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
           contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
           content: SizedBox(
             width: 380,
@@ -172,15 +193,25 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                       DropdownMenuItem(value: 'cheese', child: Text('Queso')),
                       DropdownMenuItem(value: 'yogurt', child: Text('Yogur')),
                       DropdownMenuItem(value: 'meat', child: Text('Carne')),
-                      DropdownMenuItem(value: 'poultry', child: Text('Pollo / ave')),
+                      DropdownMenuItem(
+                          value: 'poultry', child: Text('Pollo / ave')),
                       DropdownMenuItem(value: 'fish', child: Text('Pescado')),
-                      DropdownMenuItem(value: 'seafood', child: Text('Marisco')),
+                      DropdownMenuItem(
+                          value: 'seafood', child: Text('Marisco')),
                       DropdownMenuItem(value: 'eggs', child: Text('Huevos')),
-                      DropdownMenuItem(value: 'refrigerated_ready_meal', child: Text('Plato refrigerado')),
-                      DropdownMenuItem(value: 'frozen', child: Text('Congelado')),
-                      DropdownMenuItem(value: 'fruit', child: Text('Fruta refrigerada')),
-                      DropdownMenuItem(value: 'vegetables', child: Text('Verdura refrigerada')),
-                      DropdownMenuItem(value: 'other_refrigerated', child: Text('Otro refrigerado')),
+                      DropdownMenuItem(
+                          value: 'refrigerated_ready_meal',
+                          child: Text('Plato refrigerado')),
+                      DropdownMenuItem(
+                          value: 'frozen', child: Text('Congelado')),
+                      DropdownMenuItem(
+                          value: 'fruit', child: Text('Fruta refrigerada')),
+                      DropdownMenuItem(
+                          value: 'vegetables',
+                          child: Text('Verdura refrigerada')),
+                      DropdownMenuItem(
+                          value: 'other_refrigerated',
+                          child: Text('Otro refrigerado')),
                     ],
                     onChanged: (value) => category = value ?? category,
                   ),
@@ -191,7 +222,8 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                     decoration: _dialogDecoration('Ubicación'),
                     items: const [
                       DropdownMenuItem(value: 'fridge', child: Text('Nevera')),
-                      DropdownMenuItem(value: 'freezer', child: Text('Congelador')),
+                      DropdownMenuItem(
+                          value: 'freezer', child: Text('Congelador')),
                     ],
                     onChanged: (value) => storage = value ?? storage,
                   ),
@@ -200,23 +232,32 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar')),
             ElevatedButton(
               onPressed: () {
-                final quantity = double.tryParse(quantityController.text.replaceAll(',', '.')) ?? product.quantity;
+                final quantity = double.tryParse(
+                        quantityController.text.replaceAll(',', '.')) ??
+                    product.quantity;
                 final expiryDays = int.tryParse(expiryController.text);
-                final price = double.tryParse(priceController.text.replaceAll(',', '.'));
+                final price =
+                    double.tryParse(priceController.text.replaceAll(',', '.'));
                 final name = nameController.text.trim();
                 Navigator.of(context).pop(
                   product.copyWith(
                     name: name.isEmpty ? product.name : name,
-                    normalizedName: name.isEmpty ? product.normalizedName : name.toLowerCase(),
+                    normalizedName: name.isEmpty
+                        ? product.normalizedName
+                        : name.toLowerCase(),
                     quantity: quantity,
                     category: category,
                     storageLocation: storage,
                     estimatedExpiryDays: expiryDays,
                     price: price,
-                    confidence: product.confidence == 'manual' ? 'manual' : product.confidence,
+                    confidence: product.confidence == 'manual'
+                        ? 'manual'
+                        : product.confidence,
                   ),
                 );
               },
@@ -249,7 +290,8 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
+              decoration: BoxDecoration(
+                  color: Colors.white, borderRadius: BorderRadius.circular(22)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -261,11 +303,19 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(storeName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                            Text(storeName,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900, fontSize: 16)),
                             const SizedBox(height: 4),
-                            const Text('Revisa antes de guardar', style: TextStyle(color: AppColors.textSecondary)),
+                            const Text('Revisa antes de guardar',
+                                style:
+                                    TextStyle(color: AppColors.textSecondary)),
                             if (widget.analysis.store.purchaseDate != null)
-                              Text('Fecha: ${widget.analysis.store.purchaseDate}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                              Text(
+                                  'Fecha: ${widget.analysis.store.purchaseDate}',
+                                  style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12)),
                           ],
                         ),
                       ),
@@ -273,8 +323,15 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('Total añadido', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                          Text('${selectedTotal.toStringAsFixed(2)} €', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, fontSize: 18)),
+                          const Text('Total añadido',
+                              style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12)),
+                          Text('${selectedTotal.toStringAsFixed(2)} €',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primary,
+                                  fontSize: 18)),
                         ],
                       ),
                     ],
@@ -283,7 +340,9 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Productos (${_products.length})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                      Text('Productos (${_products.length})',
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w900)),
                       TextButton.icon(
                         onPressed: _addProduct,
                         icon: const Icon(Icons.add_rounded),
@@ -299,19 +358,27 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: .12), borderRadius: BorderRadius.circular(18)),
+                decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(18)),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline_rounded, color: AppColors.warning),
+                    const Icon(Icons.info_outline_rounded,
+                        color: AppColors.warning),
                     const SizedBox(width: 10),
-                    Expanded(child: Text(widget.analysis.warnings.first, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+                    Expanded(
+                        child: Text(widget.analysis.warnings.first,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary, fontSize: 13))),
                   ],
                 ),
               ),
             Expanded(
               child: _products.isEmpty
-                  ? const Center(child: Text('No se detectaron productos de nevera. Puedes añadirlos manualmente.'))
+                  ? const Center(
+                      child: Text(
+                          'No se detectaron productos de nevera. Puedes añadirlos manualmente.'))
                   : ListView.separated(
                       itemCount: _products.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -320,36 +387,52 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                         final color = _colorForProduct(item);
                         return Container(
                           padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20)),
                           child: Row(
                             children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(14)),
-                                child: Icon(_iconForCategory(item.category), color: color),
-                              ),
+                              ProductImage(category: item.category, size: 44),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(_cleanProductTitle(item), style: const TextStyle(fontWeight: FontWeight.w800)),
+                                    Text(_cleanProductTitle(item),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800)),
                                     const SizedBox(height: 2),
-                                    Text('${item.quantityLabel} · ${_storageLabel(item.storageLocation)}', style: const TextStyle(color: AppColors.textSecondary)),
-                                    Text(item.priceLabel, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 12)),
+                                    Text(
+                                        '${item.quantityLabel} · ${_storageLabel(item.storageLocation)}',
+                                        style: const TextStyle(
+                                            color: AppColors.textSecondary)),
+                                    Text(item.priceLabel,
+                                        style: const TextStyle(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12)),
                                   ],
                                 ),
                               ),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(item.expiryLabel, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+                                  Text(item.expiryLabel,
+                                      style: TextStyle(
+                                          color: color,
+                                          fontWeight: FontWeight.w800)),
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      IconButton(onPressed: () => _editProduct(index), icon: const Icon(Icons.edit_outlined)),
-                                      IconButton(onPressed: () => _removeProduct(index), icon: const Icon(Icons.close_rounded)),
+                                      IconButton(
+                                          onPressed: () => _editProduct(index),
+                                          icon:
+                                              const Icon(Icons.edit_outlined)),
+                                      IconButton(
+                                          onPressed: () =>
+                                              _removeProduct(index),
+                                          icon:
+                                              const Icon(Icons.close_rounded)),
                                     ],
                                   ),
                                 ],
@@ -366,13 +449,19 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
               child: ElevatedButton.icon(
                 onPressed: _isSaving ? null : _saveProducts,
                 icon: _isSaving
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
                     : const Icon(Icons.kitchen_rounded),
-                label: Text(_isSaving ? 'Guardando...' : 'Guardar en mi nevera'),
+                label:
+                    Text(_isSaving ? 'Guardando...' : 'Guardar en mi nevera'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18)),
                 ),
               ),
             ),
@@ -393,31 +482,5 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     if (days == null) return AppColors.secondary;
     if (days <= 2) return AppColors.warning;
     return AppColors.success;
-  }
-
-  IconData _iconForCategory(String category) {
-    switch (category) {
-      case 'dairy':
-      case 'yogurt':
-        return Icons.local_drink_rounded;
-      case 'cheese':
-        return Icons.breakfast_dining_rounded;
-      case 'meat':
-      case 'poultry':
-      case 'fish':
-      case 'seafood':
-        return Icons.restaurant_rounded;
-      case 'eggs':
-        return Icons.egg_alt_rounded;
-      case 'fruit':
-      case 'vegetables':
-        return Icons.eco_rounded;
-      case 'frozen':
-        return Icons.ac_unit_rounded;
-      case 'refrigerated_ready_meal':
-        return Icons.ramen_dining_rounded;
-      default:
-        return Icons.fastfood_rounded;
-    }
   }
 }

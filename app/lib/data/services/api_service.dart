@@ -60,7 +60,8 @@ class ApiService {
     return StatsSummaryModel.fromJson(decoded);
   }
 
-  Future<DailyStatsModel> fetchDailyStats({required int year, required int month}) async {
+  Future<DailyStatsModel> fetchDailyStats(
+      {required int year, required int month}) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/stats/daily').replace(
       queryParameters: {
         'user_id': _userId,
