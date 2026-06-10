@@ -88,7 +88,9 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _refresh() {
     if (!mounted) return Future.value();
     final nextLoad = _load();
-    setState(() => _future = nextLoad);
+    setState(() {
+      _future = nextLoad;
+    });
     return nextLoad.then<void>((_) {}, onError: (_) {});
   }
 
