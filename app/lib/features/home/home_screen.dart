@@ -247,8 +247,10 @@ class _HomeData {
 
   int get activeCount => products.where((p) => p.isPending).length;
   int get expiringSoonCount => products.where((p) => p.isExpiringSoon).length;
-  int get expiredCount =>
-      products.where((p) => p.status == 'expired' || p.isExpiredActive).length;
+  int get expiredCount => products
+      .where((p) =>
+          p.status == 'expired' || p.status == 'wasted' || p.isExpiredActive)
+      .length;
 
   static const empty = _HomeData(
       products: <ProductModel>[],
