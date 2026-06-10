@@ -5,6 +5,7 @@ import '../../data/models/product_model.dart';
 import '../../data/models/stats_summary_model.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/inventory_events.dart';
 import '../fridge/fridge_screen.dart';
 import '../scan/scan_ticket_screen.dart';
 import '../stats/stats_screen.dart';
@@ -25,12 +26,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    inventoryVersion.addListener(_refresh);
     _future = _load();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    inventoryVersion.removeListener(_refresh);
     super.dispose();
   }
 

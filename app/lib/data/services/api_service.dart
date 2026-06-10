@@ -8,6 +8,7 @@ import '../models/product_model.dart';
 import '../models/receipt_analysis_model.dart';
 import '../models/stats_summary_model.dart';
 import 'auth_service.dart';
+import 'inventory_events.dart';
 
 class ApiService {
   const ApiService({this.authService = const AuthService()});
@@ -98,6 +99,8 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Error guardando productos: ${response.body}');
     }
+
+    notifyInventoryChanged();
   }
 
   Future<ProductModel> markConsumed(String productId) async {
@@ -125,6 +128,9 @@ class ApiService {
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return ProductModel.fromJson(decoded['product'] as Map<String, dynamic>);
+    final product =
+        ProductModel.fromJson(decoded['product'] as Map<String, dynamic>);
+    notifyInventoryChanged();
+    return product;
   }
 }
