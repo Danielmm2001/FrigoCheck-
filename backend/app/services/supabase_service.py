@@ -7,7 +7,7 @@ from typing import Any
 from supabase import Client, create_client
 
 from app.config import settings
-from app.schemas.receipt import SaveReceiptRequest, UpdateProductRequest
+from app.schemas.receipt import BarcodeProductLookup, SaveReceiptRequest, UpdateProductRequest
 
 FINAL_PRODUCT_STATUSES = {"consumed", "wasted", "expired", "deleted"}
 EDITABLE_PRODUCT_FIELDS = {
@@ -27,6 +27,7 @@ EDITABLE_PRODUCT_FIELDS = {
 }
 
 PRODUCT_OPTIONAL_COLUMN_FIELDS = {"barcode", "image_url"}
+BARCODE_CACHE_TABLE = "barcode_products"
 
 
 def _normalize_supabase_url(url: str) -> str:
@@ -114,6 +115,71 @@ def _product_notes_payload(product) -> str | None:
     return json.dumps(payload, ensure_ascii=False)
 
 
+def get_cached_barcode_product(barcode: str) -> BarcodeProductLookup | None:
+    if not barcode:
+        return None
+
+    supabase = get_supabase_client()
+    try:
+        result = (
+            supabase.table(BARCODE_CACHE_TABLE)
+            .select("*")
+            .eq("barcode", barcode)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        return None
+
+    if not result.data:
+        return None
+
+    row = result.data[0]
+    return BarcodeProductLookup(
+        barcode=row.get("barcode") or barcode,
+        found=True,
+        name=row.get("name"),
+        normalized_name=row.get("normalized_name"),
+        brand=row.get("brand"),
+        category=row.get("category"),
+        quantity=row.get("quantity"),
+        unit=row.get("unit"),
+        storage_location=row.get("storage_location"),
+        estimated_expiry_days=row.get("estimated_expiry_days"),
+        expiry_confidence=row.get("expiry_confidence") or "medium",
+        image_url=row.get("image_url"),
+        source=row.get("source") or "frigocheck_cache",
+    )
+
+
+def upsert_cached_barcode_product(product) -> None:
+    barcode = (product.barcode or "").strip()
+    if not barcode:
+        return
+
+    clean_name = _clean_product_name(product.normalized_name or product.name)
+    row = {
+        "barcode": barcode,
+        "name": clean_name,
+        "normalized_name": clean_name.lower(),
+        "brand": None,
+        "category": product.category,
+        "quantity": product.quantity,
+        "unit": product.unit,
+        "storage_location": product.storage_location,
+        "estimated_expiry_days": product.estimated_expiry_days,
+        "expiry_confidence": product.expiry_confidence,
+        "image_url": product.image_url,
+        "source": "frigocheck_cache",
+    }
+
+    supabase = get_supabase_client()
+    try:
+        supabase.table(BARCODE_CACHE_TABLE).upsert(row, on_conflict="barcode").execute()
+    except Exception:
+        return
+
+
 def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
     supabase = get_supabase_client()
 
@@ -139,6 +205,7 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
     for product in payload.products:
         estimated_expiry_date = _estimate_expiry_date_from_added_date(product.estimated_expiry_days)
         clean_name = _clean_product_name(product.normalized_name or product.name)
+        upsert_cached_barcode_product(product)
         product_rows.append(
             {
                 "user_id": payload.user_id,

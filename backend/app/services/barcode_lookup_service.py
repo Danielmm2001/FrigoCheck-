@@ -7,7 +7,7 @@ from urllib.request import Request, urlopen
 
 from app.config import settings
 from app.schemas.receipt import BarcodeProductLookup
-from app.services.supabase_service import _clean_product_name
+from app.services.supabase_service import _clean_product_name, get_cached_barcode_product
 
 
 OPEN_FOOD_FACTS_FIELDS = ",".join(
@@ -39,6 +39,10 @@ def lookup_barcode_product(barcode: str) -> BarcodeProductLookup:
             found=False,
             message="Codigo de barras no valido",
         )
+
+    cached_product = get_cached_barcode_product(clean_barcode)
+    if cached_product:
+        return cached_product
 
     for source, base_url in OPEN_FACTS_PROVIDERS:
         product = _fetch_open_facts_product(clean_barcode, base_url=base_url)
