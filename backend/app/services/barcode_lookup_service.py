@@ -5,6 +5,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+from app.config import settings
 from app.schemas.receipt import BarcodeProductLookup
 from app.services.supabase_service import _clean_product_name
 
@@ -24,6 +25,12 @@ OPEN_FOOD_FACTS_FIELDS = ",".join(
 )
 
 
+OPEN_FACTS_PROVIDERS = [
+    ("open_food_facts", "https://world.openfoodfacts.org"),
+    ("open_products_facts", "https://world.openproductsfacts.org"),
+]
+
+
 def lookup_barcode_product(barcode: str) -> BarcodeProductLookup:
     clean_barcode = re.sub(r"\D+", "", barcode or "")
     if len(clean_barcode) < 8:
@@ -33,15 +40,32 @@ def lookup_barcode_product(barcode: str) -> BarcodeProductLookup:
             message="Codigo de barras no valido",
         )
 
-    product = _fetch_open_food_facts_product(clean_barcode)
-    if not product:
-        return BarcodeProductLookup(
-            barcode=clean_barcode,
-            found=False,
-            source="open_food_facts",
-            message="Producto no encontrado",
-        )
+    for source, base_url in OPEN_FACTS_PROVIDERS:
+        product = _fetch_open_facts_product(clean_barcode, base_url=base_url)
+        if product:
+            return _lookup_from_open_facts_product(
+                barcode=clean_barcode,
+                product=product,
+                source=source,
+            )
 
+    commercial_lookup = _fetch_barcode_lookup_product(clean_barcode)
+    if commercial_lookup:
+        return commercial_lookup
+
+    return BarcodeProductLookup(
+        barcode=clean_barcode,
+        found=False,
+        source="open_food_facts,open_products_facts,barcode_lookup",
+        message="Producto no encontrado",
+    )
+
+
+def _lookup_from_open_facts_product(
+    barcode: str,
+    product: dict[str, Any],
+    source: str,
+) -> BarcodeProductLookup:
     category = _map_category(product)
     quantity, unit = _parse_quantity(product.get("quantity"))
     expiry_days = _estimated_expiry_days(category)
@@ -49,7 +73,7 @@ def lookup_barcode_product(barcode: str) -> BarcodeProductLookup:
     normalized_name = _clean_product_name(name)
 
     return BarcodeProductLookup(
-        barcode=clean_barcode,
+        barcode=barcode,
         found=True,
         name=normalized_name,
         normalized_name=normalized_name.lower(),
@@ -61,13 +85,13 @@ def lookup_barcode_product(barcode: str) -> BarcodeProductLookup:
         estimated_expiry_days=expiry_days,
         expiry_confidence="medium",
         image_url=product.get("image_front_url") or product.get("image_url"),
-        source="open_food_facts",
+        source=source,
     )
 
 
-def _fetch_open_food_facts_product(barcode: str) -> dict[str, Any] | None:
+def _fetch_open_facts_product(barcode: str, base_url: str) -> dict[str, Any] | None:
     url = (
-        "https://world.openfoodfacts.org/api/v2/product/"
+        f"{base_url}/api/v2/product/"
         f"{quote(barcode)}.json?fields={quote(OPEN_FOOD_FACTS_FIELDS)}"
     )
     request = Request(
@@ -89,6 +113,66 @@ def _fetch_open_food_facts_product(barcode: str) -> dict[str, Any] | None:
     return product if isinstance(product, dict) else None
 
 
+def _fetch_barcode_lookup_product(barcode: str) -> BarcodeProductLookup | None:
+    api_key = settings.BARCODE_LOOKUP_API_KEY.strip()
+    if not api_key:
+        return None
+
+    url = (
+        "https://api.barcodelookup.com/v3/products"
+        f"?barcode={quote(barcode)}&formatted=y&key={quote(api_key)}"
+    )
+    request = Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "FrigoCheck/0.1 barcode-lookup",
+        },
+    )
+    try:
+        with urlopen(request, timeout=8) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError):
+        return None
+
+    products = payload.get("products")
+    if not isinstance(products, list) or not products:
+        return None
+    product = products[0]
+    if not isinstance(product, dict):
+        return None
+
+    name = _string_value(product.get("title")) or _string_value(product.get("product_name"))
+    if not name:
+        return None
+
+    category = _map_category(
+        {
+            "categories": _string_value(product.get("category")),
+            "product_name": name,
+        }
+    )
+    quantity, unit = _parse_quantity(product.get("size"))
+    image_url = _first_image(product.get("images"))
+    normalized_name = _clean_product_name(name)
+
+    return BarcodeProductLookup(
+        barcode=barcode,
+        found=True,
+        name=normalized_name,
+        normalized_name=normalized_name.lower(),
+        brand=_string_value(product.get("brand")),
+        category=category,
+        quantity=quantity,
+        unit=unit,
+        storage_location="freezer" if category == "frozen" else "fridge",
+        estimated_expiry_days=_estimated_expiry_days(category),
+        expiry_confidence="medium",
+        image_url=image_url,
+        source="barcode_lookup",
+    )
+
+
 def _product_name(product: dict[str, Any]) -> str | None:
     for key in ("product_name_es", "product_name", "generic_name"):
         value = product.get(key)
@@ -101,6 +185,23 @@ def _first_brand(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
     return value.split(",")[0].strip() or None
+
+
+def _string_value(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def _first_image(value: Any) -> str | None:
+    if isinstance(value, list):
+        for item in value:
+            if isinstance(item, str) and item.strip():
+                return item.strip()
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
 
 
 def _map_category(product: dict[str, Any]) -> str:

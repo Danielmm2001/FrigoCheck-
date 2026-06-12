@@ -190,10 +190,17 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     DetectedProductModel product,
     BarcodeProductLookupModel lookup,
   ) {
+    final currentTitle = _cleanProductTitle(product);
+    final lookupTitle = (lookup.name ?? '').trim();
+    final mergedName = _shouldUseLookupName(currentTitle, lookupTitle)
+        ? lookupTitle
+        : currentTitle;
+
     return product.copyWith(
-      name: lookup.name ?? product.name,
-      normalizedName:
-          lookup.normalizedName ?? lookup.name ?? product.normalizedName,
+      name: mergedName.isEmpty ? product.name : mergedName,
+      normalizedName: mergedName.isEmpty
+          ? product.normalizedName
+          : mergedName.toLowerCase(),
       barcode: lookup.barcode,
       category: lookup.category ?? product.category,
       quantity: lookup.quantity ?? product.quantity,
@@ -208,6 +215,37 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
       price: product.price,
       imageUrl: lookup.imageUrl ?? product.imageUrl,
     );
+  }
+
+  bool _shouldUseLookupName(String currentTitle, String lookupTitle) {
+    final current = currentTitle.trim();
+    final lookup = lookupTitle.trim();
+    if (lookup.isEmpty) return false;
+    if (current.isEmpty) return true;
+
+    final currentQuality = _nameQualityScore(current);
+    final lookupQuality = _nameQualityScore(lookup);
+    return lookupQuality > currentQuality + 1;
+  }
+
+  int _nameQualityScore(String value) {
+    final normalized = value.toLowerCase().trim();
+    if (normalized.isEmpty) return 0;
+
+    var score = 0;
+    final words = normalized
+        .split(RegExp(r'\s+'))
+        .where((word) => word.length > 1)
+        .toList();
+    score += words.length * 2;
+    score += normalized.length > 8 ? 2 : 0;
+    score += normalized.contains(RegExp(r'\b(nuevo|producto)\b')) ? -6 : 0;
+    score += normalized.contains(RegExp(r'\bqued[oó]\b')) ? -8 : 0;
+    score += normalized.contains(
+            RegExp(r'\bqueso|pollo|yogur|yogurt|leche|carne|pescado|huevo\b'))
+        ? 4
+        : 0;
+    return score;
   }
 
   Future<DetectedProductModel?> _showProductDialog(DetectedProductModel product,
