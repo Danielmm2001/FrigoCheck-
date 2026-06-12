@@ -7,6 +7,7 @@ import '../../data/models/product_model.dart';
 import '../../data/models/stats_summary_model.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/expiry_notification_service.dart';
 import '../../data/services/inventory_events.dart';
 import '../main/main_tabs.dart';
 
@@ -93,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _signOut() async {
+    await ExpiryNotificationService.instance.cancelCurrentUserNotifications();
     await _auth.signOut();
   }
 
