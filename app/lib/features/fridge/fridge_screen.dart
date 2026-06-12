@@ -413,7 +413,11 @@ class _ProductCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              ProductImage(category: product.category, size: 52),
+              ProductImage(
+                category: product.category,
+                imageUrl: product.imageUrl,
+                size: 52,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

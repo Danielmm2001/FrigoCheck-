@@ -31,6 +31,7 @@ class DetectedProductModel {
   const DetectedProductModel({
     required this.name,
     this.normalizedName,
+    this.barcode,
     required this.category,
     required this.quantity,
     required this.unit,
@@ -39,11 +40,13 @@ class DetectedProductModel {
     required this.expiryConfidence,
     required this.confidence,
     this.price,
+    this.imageUrl,
     this.notes,
   });
 
   final String name;
   final String? normalizedName;
+  final String? barcode;
   final String category;
   final double quantity;
   final String unit;
@@ -52,12 +55,14 @@ class DetectedProductModel {
   final String expiryConfidence;
   final String confidence;
   final double? price;
+  final String? imageUrl;
   final String? notes;
 
   factory DetectedProductModel.fromJson(Map<String, dynamic> json) {
     return DetectedProductModel(
       name: json['name']?.toString() ?? 'Producto',
       normalizedName: json['normalized_name']?.toString(),
+      barcode: json['barcode']?.toString(),
       category: json['category']?.toString() ?? 'other_refrigerated',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 1,
       unit: json['unit']?.toString() ?? 'ud',
@@ -66,6 +71,7 @@ class DetectedProductModel {
       expiryConfidence: json['expiry_confidence']?.toString() ?? 'medium',
       confidence: json['confidence']?.toString() ?? 'medium',
       price: (json['price'] as num?)?.toDouble(),
+      imageUrl: json['image_url']?.toString(),
       notes: json['notes']?.toString(),
     );
   }
@@ -73,6 +79,7 @@ class DetectedProductModel {
   DetectedProductModel copyWith({
     String? name,
     String? normalizedName,
+    String? barcode,
     String? category,
     double? quantity,
     String? unit,
@@ -81,11 +88,13 @@ class DetectedProductModel {
     String? expiryConfidence,
     String? confidence,
     double? price,
+    String? imageUrl,
     String? notes,
   }) {
     return DetectedProductModel(
       name: name ?? this.name,
       normalizedName: normalizedName ?? this.normalizedName,
+      barcode: barcode ?? this.barcode,
       category: category ?? this.category,
       quantity: quantity ?? this.quantity,
       unit: unit ?? this.unit,
@@ -94,6 +103,7 @@ class DetectedProductModel {
       expiryConfidence: expiryConfidence ?? this.expiryConfidence,
       confidence: confidence ?? this.confidence,
       price: price ?? this.price,
+      imageUrl: imageUrl ?? this.imageUrl,
       notes: notes ?? this.notes,
     );
   }
@@ -102,6 +112,7 @@ class DetectedProductModel {
     return {
       'name': name,
       'normalized_name': normalizedName,
+      'barcode': barcode,
       'category': category,
       'quantity': quantity,
       'unit': unit,
@@ -110,6 +121,7 @@ class DetectedProductModel {
       'expiry_confidence': expiryConfidence,
       'confidence': confidence,
       'price': price,
+      'image_url': imageUrl,
       'notes': notes,
     };
   }
@@ -132,6 +144,59 @@ class DetectedProductModel {
   String get priceLabel {
     if (price == null) return 'Sin precio';
     return '${price!.toStringAsFixed(2)} €';
+  }
+}
+
+class BarcodeProductLookupModel {
+  const BarcodeProductLookupModel({
+    required this.barcode,
+    required this.found,
+    this.name,
+    this.normalizedName,
+    this.brand,
+    this.category,
+    this.quantity,
+    this.unit,
+    this.storageLocation,
+    this.estimatedExpiryDays,
+    this.expiryConfidence = 'medium',
+    this.imageUrl,
+    this.source,
+    this.message,
+  });
+
+  final String barcode;
+  final bool found;
+  final String? name;
+  final String? normalizedName;
+  final String? brand;
+  final String? category;
+  final double? quantity;
+  final String? unit;
+  final String? storageLocation;
+  final int? estimatedExpiryDays;
+  final String expiryConfidence;
+  final String? imageUrl;
+  final String? source;
+  final String? message;
+
+  factory BarcodeProductLookupModel.fromJson(Map<String, dynamic> json) {
+    return BarcodeProductLookupModel(
+      barcode: json['barcode']?.toString() ?? '',
+      found: json['found'] == true,
+      name: json['name']?.toString(),
+      normalizedName: json['normalized_name']?.toString(),
+      brand: json['brand']?.toString(),
+      category: json['category']?.toString(),
+      quantity: (json['quantity'] as num?)?.toDouble(),
+      unit: json['unit']?.toString(),
+      storageLocation: json['storage_location']?.toString(),
+      estimatedExpiryDays: (json['estimated_expiry_days'] as num?)?.toInt(),
+      expiryConfidence: json['expiry_confidence']?.toString() ?? 'medium',
+      imageUrl: json['image_url']?.toString(),
+      source: json['source']?.toString(),
+      message: json['message']?.toString(),
+    );
   }
 }
 

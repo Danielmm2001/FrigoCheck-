@@ -6,10 +6,12 @@ class ProductImage extends StatelessWidget {
   const ProductImage({
     super.key,
     required this.category,
+    this.imageUrl,
     this.size = 54,
   });
 
   final String category;
+  final String? imageUrl;
   final double size;
 
   @override
@@ -29,16 +31,43 @@ class ProductImage extends StatelessWidget {
           ),
         ],
       ),
-      child: Center(
-        child: Container(
-          width: size * .76,
-          height: size * .76,
-          decoration: BoxDecoration(
-            color: spec.color.withValues(alpha: .12),
-            borderRadius: BorderRadius.circular(size * .22),
-          ),
-          child: Icon(spec.icon, color: spec.color, size: size * .44),
+      clipBehavior: Clip.antiAlias,
+      child: _hasImage
+          ? Padding(
+              padding: EdgeInsets.all(size * .08),
+              child: Image.network(
+                imageUrl!,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => _FallbackProductIcon(
+                  spec: spec,
+                  size: size,
+                ),
+              ),
+            )
+          : _FallbackProductIcon(spec: spec, size: size),
+    );
+  }
+
+  bool get _hasImage => imageUrl != null && imageUrl!.trim().isNotEmpty;
+}
+
+class _FallbackProductIcon extends StatelessWidget {
+  const _FallbackProductIcon({required this.spec, required this.size});
+
+  final _ProductVisualSpec spec;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: size * .76,
+        height: size * .76,
+        decoration: BoxDecoration(
+          color: spec.color.withValues(alpha: .12),
+          borderRadius: BorderRadius.circular(size * .22),
         ),
+        child: Icon(spec.icon, color: spec.color, size: size * .44),
       ),
     );
   }

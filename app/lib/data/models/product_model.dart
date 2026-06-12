@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class ProductModel {
   static const int expiryWarningDays = 4;
 
@@ -14,6 +16,8 @@ class ProductModel {
     required this.expiryConfidence,
     required this.status,
     this.price,
+    this.barcode,
+    this.imageUrl,
     this.notes,
   });
 
@@ -29,9 +33,12 @@ class ProductModel {
   final String expiryConfidence;
   final String status;
   final double? price;
+  final String? barcode;
+  final String? imageUrl;
   final String? notes;
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    final parsedNotes = _ParsedProductNotes.fromJson(json['notes']);
     return ProductModel(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Producto',
@@ -45,7 +52,10 @@ class ProductModel {
       expiryConfidence: json['expiry_confidence']?.toString() ?? 'medium',
       status: json['status']?.toString() ?? 'active',
       price: (json['price'] as num?)?.toDouble(),
-      notes: json['notes']?.toString(),
+      barcode: json['barcode']?.toString() ?? parsedNotes.metadata['barcode'],
+      imageUrl:
+          json['image_url']?.toString() ?? parsedNotes.metadata['image_url'],
+      notes: parsedNotes.text,
     );
   }
 
@@ -102,5 +112,44 @@ class ProductModel {
       default:
         return status;
     }
+  }
+}
+
+class _ParsedProductNotes {
+  const _ParsedProductNotes({required this.text, required this.metadata});
+
+  final String? text;
+  final Map<String, String> metadata;
+
+  factory _ParsedProductNotes.fromJson(dynamic value) {
+    final raw = value?.toString();
+    if (raw == null || raw.trim().isEmpty) {
+      return const _ParsedProductNotes(text: null, metadata: {});
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        final metadataValue = decoded['_frigocheck'];
+        final metadata = <String, String>{};
+        if (metadataValue is Map<String, dynamic>) {
+          for (final entry in metadataValue.entries) {
+            final value = entry.value?.toString();
+            if (value != null && value.isNotEmpty) {
+              metadata[entry.key] = value;
+            }
+          }
+        }
+        final text = decoded['text']?.toString();
+        return _ParsedProductNotes(
+          text: text == null || text.trim().isEmpty ? null : text,
+          metadata: metadata,
+        );
+      }
+    } catch (_) {
+      // Existing plain notes should continue to render as normal user text.
+    }
+
+    return _ParsedProductNotes(text: raw, metadata: const {});
   }
 }

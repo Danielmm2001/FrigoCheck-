@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas.receipt import UpdateProductRequest
+from app.services.barcode_lookup_service import lookup_barcode_product
 from app.services.supabase_service import (
     delete_product_for_user,
     get_product_for_user,
@@ -20,6 +21,15 @@ def list_products(
     """List products saved in Supabase for one user."""
     try:
         return {"products": list_products_for_user(user_id=user_id, status=status)}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/barcode/{barcode}")
+def lookup_barcode(barcode: str):
+    """Resolve a barcode into product metadata from external product databases."""
+    try:
+        return {"product": lookup_barcode_product(barcode).model_dump()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

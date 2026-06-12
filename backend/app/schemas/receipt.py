@@ -10,6 +10,7 @@ class StoreData(BaseModel):
 class DetectedProduct(BaseModel):
     name: str
     normalized_name: str | None = None
+    barcode: str | None = None
     category: str = "other"
     quantity: float = 1
     unit: str = "ud"
@@ -18,6 +19,7 @@ class DetectedProduct(BaseModel):
     expiry_confidence: str = "medium"
     confidence: str = "medium"
     price: float | None = None
+    image_url: str | None = None
     notes: str | None = None
 
 
@@ -37,6 +39,7 @@ class SaveReceiptResponse(BaseModel):
 class UpdateProductRequest(BaseModel):
     name: str | None = None
     normalized_name: str | None = None
+    barcode: str | None = None
     category: str | None = None
     quantity: float | None = None
     unit: str | None = None
@@ -45,4 +48,22 @@ class UpdateProductRequest(BaseModel):
     estimated_expiry_date: str | None = None
     expiry_confidence: str | None = None
     price: float | None = None
+    image_url: str | None = None
     notes: str | None = None
+
+
+class BarcodeProductLookup(BaseModel):
+    barcode: str
+    found: bool
+    name: str | None = None
+    normalized_name: str | None = None
+    brand: str | None = None
+    category: str | None = None
+    quantity: float | None = None
+    unit: str | None = None
+    storage_location: str | None = None
+    estimated_expiry_days: int | None = None
+    expiry_confidence: str = "medium"
+    image_url: str | None = None
+    source: str | None = None
+    message: str | None = None

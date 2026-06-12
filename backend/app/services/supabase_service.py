@@ -1,4 +1,5 @@
 import calendar
+import json
 import re
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -12,6 +13,7 @@ FINAL_PRODUCT_STATUSES = {"consumed", "wasted", "expired", "deleted"}
 EDITABLE_PRODUCT_FIELDS = {
     "name",
     "normalized_name",
+    "barcode",
     "category",
     "quantity",
     "unit",
@@ -20,8 +22,11 @@ EDITABLE_PRODUCT_FIELDS = {
     "estimated_expiry_date",
     "expiry_confidence",
     "price",
+    "image_url",
     "notes",
 }
+
+PRODUCT_OPTIONAL_COLUMN_FIELDS = {"barcode", "image_url"}
 
 
 def _normalize_supabase_url(url: str) -> str:
@@ -64,20 +69,49 @@ def _clean_product_name(value: str | None) -> str:
 
 
 def _insert_products_with_price_fallback(supabase: Client, product_rows: list[dict[str, Any]]):
-    """Insert products and tolerate projects that have not run the price migration yet."""
+    """Insert products and tolerate projects that have not run optional migrations yet."""
     try:
         return supabase.table("products").insert(product_rows).execute()
     except Exception as exc:
         message = str(exc)
-        if "price" not in message or "schema cache" not in message:
+        missing_field = _optional_schema_field_from_error(message)
+        if not missing_field:
             raise
 
         fallback_rows = []
         for row in product_rows:
             clean_row = dict(row)
-            clean_row.pop("price", None)
+            clean_row.pop(missing_field, None)
             fallback_rows.append(clean_row)
-        return supabase.table("products").insert(fallback_rows).execute()
+        return _insert_products_with_price_fallback(supabase, fallback_rows)
+
+
+def _optional_schema_field_from_error(message: str) -> str | None:
+    if "schema cache" not in message:
+        return None
+    for field in {"price", *PRODUCT_OPTIONAL_COLUMN_FIELDS}:
+        if field in message:
+            return field
+    return None
+
+
+def _product_notes_payload(product) -> str | None:
+    metadata = {
+        key: value
+        for key, value in {
+            "barcode": product.barcode,
+            "image_url": product.image_url,
+        }.items()
+        if value
+    }
+    if not metadata:
+        return product.notes
+
+    payload = {
+        "_frigocheck": metadata,
+        "text": product.notes,
+    }
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
@@ -111,6 +145,7 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
                 "receipt_id": receipt_id,
                 "name": clean_name,
                 "normalized_name": clean_name.lower(),
+                "barcode": product.barcode,
                 "category": product.category,
                 "quantity": product.quantity,
                 "unit": product.unit,
@@ -119,8 +154,9 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
                 "estimated_expiry_date": estimated_expiry_date,
                 "expiry_confidence": product.expiry_confidence,
                 "price": product.price,
+                "image_url": product.image_url,
                 "status": "active",
-                "notes": product.notes,
+                "notes": _product_notes_payload(product),
             }
         )
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/product_image.dart';
@@ -25,6 +26,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
   final ApiService _apiService = const ApiService();
   late List<DetectedProductModel> _products;
   bool _isSaving = false;
+  int? _barcodeLoadingIndex;
 
   @override
   void initState() {
@@ -143,6 +145,69 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     if (updated != null) {
       setState(() => _products[index] = updated);
     }
+  }
+
+  Future<void> _scanBarcodeForProduct(int index) async {
+    final barcode = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const _BarcodeScannerScreen()),
+    );
+    if (barcode == null || barcode.trim().isEmpty) return;
+    if (!mounted) return;
+
+    setState(() => _barcodeLoadingIndex = index);
+    try {
+      final lookup = await _apiService.lookupBarcode(barcode);
+      if (!mounted) return;
+
+      if (!lookup.found) {
+        setState(() {
+          _products[index] = _products[index].copyWith(barcode: barcode);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(lookup.message ?? 'No he encontrado ese producto'),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _products[index] = _mergeBarcodeLookup(_products[index], lookup);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${lookup.name ?? 'Producto'} actualizado')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _barcodeLoadingIndex = null);
+    }
+  }
+
+  DetectedProductModel _mergeBarcodeLookup(
+    DetectedProductModel product,
+    BarcodeProductLookupModel lookup,
+  ) {
+    return product.copyWith(
+      name: lookup.name ?? product.name,
+      normalizedName:
+          lookup.normalizedName ?? lookup.name ?? product.normalizedName,
+      barcode: lookup.barcode,
+      category: lookup.category ?? product.category,
+      quantity: lookup.quantity ?? product.quantity,
+      unit: lookup.unit ?? product.unit,
+      storageLocation: lookup.storageLocation ?? product.storageLocation,
+      estimatedExpiryDays:
+          lookup.estimatedExpiryDays ?? product.estimatedExpiryDays,
+      expiryConfidence: lookup.estimatedExpiryDays == null
+          ? product.expiryConfidence
+          : lookup.expiryConfidence,
+      confidence: 'barcode',
+      price: product.price,
+      imageUrl: lookup.imageUrl ?? product.imageUrl,
+    );
   }
 
   Future<DetectedProductModel?> _showProductDialog(DetectedProductModel product,
@@ -403,7 +468,11 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                               borderRadius: BorderRadius.circular(20)),
                           child: Row(
                             children: [
-                              ProductImage(category: item.category, size: 44),
+                              ProductImage(
+                                category: item.category,
+                                imageUrl: item.imageUrl,
+                                size: 52,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -435,6 +504,26 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      IconButton(
+                                        tooltip: 'Escanear codigo',
+                                        onPressed: _barcodeLoadingIndex == null
+                                            ? () =>
+                                                _scanBarcodeForProduct(index)
+                                            : null,
+                                        icon: _barcodeLoadingIndex == index
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : const Icon(
+                                                Icons.qr_code_scanner_rounded,
+                                                color: AppColors.primary,
+                                              ),
+                                      ),
                                       IconButton(
                                           onPressed: () => _editProduct(index),
                                           icon:
@@ -495,5 +584,127 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
       return AppColors.warning;
     }
     return AppColors.success;
+  }
+}
+
+class _BarcodeScannerScreen extends StatefulWidget {
+  const _BarcodeScannerScreen();
+
+  @override
+  State<_BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
+}
+
+class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
+  late final MobileScannerController _controller;
+  bool _completed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = MobileScannerController(
+      formats: const [
+        BarcodeFormat.ean8,
+        BarcodeFormat.ean13,
+        BarcodeFormat.upcA,
+        BarcodeFormat.upcE,
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleDetection(BarcodeCapture capture) {
+    if (_completed) return;
+    for (final barcode in capture.barcodes) {
+      final code = barcode.rawValue;
+      if (code == null || code.trim().isEmpty) continue;
+      _completed = true;
+      Navigator.of(context).pop(code.trim());
+      return;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Escanear codigo'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: _controller,
+            onDetect: _handleDetection,
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: .48),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: const Text(
+                      'Coloca el codigo dentro del marco',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  AspectRatio(
+                    aspectRatio: 1.55,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 3),
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                          label: const Text('Cancelar'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton.filled(
+                        onPressed: () => _controller.toggleTorch(),
+                        icon: const Icon(Icons.flash_on_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -79,6 +79,20 @@ class ApiService {
     return DailyStatsModel.fromJson(decoded);
   }
 
+  Future<BarcodeProductLookupModel> lookupBarcode(String barcode) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/products/barcode/$barcode');
+    final response = await http.get(uri, headers: _headers);
+
+    if (response.statusCode != 200) {
+      throw Exception('Error buscando producto: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return BarcodeProductLookupModel.fromJson(
+      decoded['product'] as Map<String, dynamic>,
+    );
+  }
+
   Future<ReceiptAnalysisModel> analyzeReceiptImage(File imageFile) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/receipts/analyze');
     final request = http.MultipartRequest('POST', uri)

@@ -330,7 +330,11 @@ class _ProductTile extends StatelessWidget {
       decoration: BoxDecoration(
           color: Colors.white, borderRadius: BorderRadius.circular(20)),
       child: Row(children: [
-        ProductImage(category: product.category, size: 44),
+        ProductImage(
+          category: product.category,
+          imageUrl: product.imageUrl,
+          size: 44,
+        ),
         const SizedBox(width: 12),
         Expanded(
             child: Text(product.name,
