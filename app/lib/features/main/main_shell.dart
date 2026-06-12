@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../data/services/expiry_notification_service.dart';
 import '../../data/services/inventory_events.dart';
 import '../fridge/fridge_screen.dart';
 import '../home/home_screen.dart';
@@ -15,7 +18,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   MainTab _currentTab = MainTab.home;
 
   late final List<Widget> _pages = [
@@ -26,6 +29,32 @@ class _MainShellState extends State<MainShell> {
   ];
 
   int get _currentIndex => MainTab.values.indexOf(_currentTab);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    inventoryVersion.addListener(_checkExpiryNotifications);
+    _checkExpiryNotifications();
+  }
+
+  @override
+  void dispose() {
+    inventoryVersion.removeListener(_checkExpiryNotifications);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkExpiryNotifications();
+    }
+  }
+
+  void _checkExpiryNotifications() {
+    unawaited(ExpiryNotificationService.instance.checkAndNotify());
+  }
 
   void _selectTab(MainTab tab) {
     if (!mounted) return;

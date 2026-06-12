@@ -1,4 +1,6 @@
 class ProductModel {
+  static const int expiryWarningDays = 4;
+
   const ProductModel({
     required this.id,
     required this.name,
@@ -63,7 +65,7 @@ class ProductModel {
   bool get isExpiringSoon {
     if (status != 'active') return false;
     final days = daysLeft;
-    return days != null && days >= 0 && days <= 2;
+    return days != null && days >= 0 && days <= expiryWarningDays;
   }
 
   String get quantityLabel {

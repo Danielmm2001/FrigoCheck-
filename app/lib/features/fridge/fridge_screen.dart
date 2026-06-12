@@ -387,7 +387,7 @@ class _ProductCard extends StatelessWidget {
     final days = product.daysLeft;
     if (days == null) return AppColors.secondary;
     if (days < 0) return AppColors.danger;
-    if (days <= 2) return AppColors.warning;
+    if (product.isExpiringSoon) return AppColors.warning;
     return AppColors.success;
   }
 
@@ -396,7 +396,7 @@ class _ProductCard extends StatelessWidget {
     final days = product.daysLeft;
     if (days == null) return 'Sin fecha';
     if (days < 0) return 'Vencido';
-    if (days <= 2) return 'Por revisar';
+    if (product.isExpiringSoon) return 'Por revisar';
     return 'En buen estado';
   }
 

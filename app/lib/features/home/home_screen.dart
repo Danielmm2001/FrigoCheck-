@@ -319,7 +319,7 @@ class _ProductTile extends StatelessWidget {
         ? AppColors.secondary
         : days < 0
             ? AppColors.danger
-            : days <= 2
+            : product.isExpiringSoon
                 ? AppColors.warning
                 : AppColors.success;
     return Container(

@@ -286,7 +286,7 @@ def get_stats_summary_for_user(user_id: str) -> dict[str, Any]:
         days_left = (expiry_date - today).days
         if days_left < 0:
             expired_active.append(product)
-        elif days_left <= 2:
+        elif days_left <= 4:
             expiring_soon.append(product)
 
     saved_value = sum((product.get("price") or 0) for product in consumed_products)

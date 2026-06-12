@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/product_image.dart';
+import '../../data/models/product_model.dart';
 import '../../data/models/receipt_analysis_model.dart';
 import '../../data/services/api_service.dart';
 import '../fridge/fridge_screen.dart';
@@ -490,7 +491,9 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     final days = product.estimatedExpiryDays;
     if (product.storageLocation == 'freezer') return AppColors.secondary;
     if (days == null) return AppColors.secondary;
-    if (days <= 2) return AppColors.warning;
+    if (days >= 0 && days <= ProductModel.expiryWarningDays) {
+      return AppColors.warning;
+    }
     return AppColors.success;
   }
 }
