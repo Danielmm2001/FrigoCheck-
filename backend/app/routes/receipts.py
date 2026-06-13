@@ -1,5 +1,6 @@
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
+from app.auth import current_user_id
 from app.schemas.receipt import SaveReceiptRequest, SaveReceiptResponse
 from app.services.openai_service import analyze_expiry_date_image, analyze_receipt_image
 from app.services.supabase_service import save_receipt_with_products
@@ -8,7 +9,10 @@ router = APIRouter()
 
 
 @router.post("/analyze")
-async def analyze_receipt(user_id: str = Form(...), image: UploadFile = File(...)):
+async def analyze_receipt(
+    image: UploadFile = File(...),
+    user_id: str = Depends(current_user_id),
+):
     """Analyze a receipt image and return detected products."""
     try:
         image_bytes = await image.read()
@@ -27,10 +31,13 @@ async def analyze_receipt(user_id: str = Form(...), image: UploadFile = File(...
 
 
 @router.post("/save", response_model=SaveReceiptResponse)
-def save_receipt(payload: SaveReceiptRequest):
+def save_receipt(
+    payload: SaveReceiptRequest,
+    user_id: str = Depends(current_user_id),
+):
     """Save a confirmed receipt and its detected products into Supabase."""
     try:
-        return save_receipt_with_products(payload)
+        return save_receipt_with_products(payload, user_id=user_id)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -39,6 +46,7 @@ def save_receipt(payload: SaveReceiptRequest):
 async def analyze_expiry_date(
     image: UploadFile = File(...),
     product_name: str | None = Form(default=None),
+    user_id: str = Depends(current_user_id),
 ):
     """Analyze a package expiry date image and return the exact days left when readable."""
     try:

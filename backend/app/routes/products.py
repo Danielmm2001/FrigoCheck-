@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.auth import current_user_id
 from app.schemas.receipt import UpdateProductRequest
 from app.services.barcode_lookup_service import lookup_barcode_product
 from app.services.supabase_service import (
@@ -15,7 +16,7 @@ router = APIRouter()
 
 @router.get("")
 def list_products(
-    user_id: str = Query(...),
+    user_id: str = Depends(current_user_id),
     status: str | None = Query(default=None),
 ):
     """List products saved in Supabase for one user."""
@@ -26,7 +27,7 @@ def list_products(
 
 
 @router.get("/barcode/{barcode}")
-def lookup_barcode(barcode: str):
+def lookup_barcode(barcode: str, user_id: str = Depends(current_user_id)):
     """Resolve a barcode into product metadata from external product databases."""
     try:
         return {"product": lookup_barcode_product(barcode).model_dump()}
@@ -35,7 +36,7 @@ def lookup_barcode(barcode: str):
 
 
 @router.get("/{product_id}")
-def get_product(product_id: str, user_id: str = Query(...)):
+def get_product(product_id: str, user_id: str = Depends(current_user_id)):
     """Get one product by ID."""
     try:
         return {"product": get_product_for_user(product_id=product_id, user_id=user_id)}
@@ -44,7 +45,11 @@ def get_product(product_id: str, user_id: str = Query(...)):
 
 
 @router.patch("/{product_id}")
-def update_product(product_id: str, payload: UpdateProductRequest, user_id: str = Query(...)):
+def update_product(
+    product_id: str,
+    payload: UpdateProductRequest,
+    user_id: str = Depends(current_user_id),
+):
     """Edit an active product before it reaches a final state."""
     try:
         product = update_product_for_user(product_id=product_id, user_id=user_id, payload=payload)
@@ -54,7 +59,7 @@ def update_product(product_id: str, payload: UpdateProductRequest, user_id: str 
 
 
 @router.delete("/{product_id}")
-def delete_product(product_id: str, user_id: str = Query(...)):
+def delete_product(product_id: str, user_id: str = Depends(current_user_id)):
     """Soft-delete a product."""
     try:
         product = delete_product_for_user(product_id=product_id, user_id=user_id)
@@ -64,7 +69,7 @@ def delete_product(product_id: str, user_id: str = Query(...)):
 
 
 @router.post("/{product_id}/consume")
-def consume_product(product_id: str, user_id: str = Query(...)):
+def consume_product(product_id: str, user_id: str = Depends(current_user_id)):
     """Mark a product as consumed."""
     try:
         product = mark_product_status(
@@ -79,7 +84,7 @@ def consume_product(product_id: str, user_id: str = Query(...)):
 
 
 @router.post("/{product_id}/waste")
-def waste_product(product_id: str, user_id: str = Query(...)):
+def waste_product(product_id: str, user_id: str = Depends(current_user_id)):
     """Mark a product as wasted."""
     try:
         product = mark_product_status(
@@ -94,7 +99,7 @@ def waste_product(product_id: str, user_id: str = Query(...)):
 
 
 @router.post("/{product_id}/expire")
-def expire_product(product_id: str, user_id: str = Query(...)):
+def expire_product(product_id: str, user_id: str = Depends(current_user_id)):
     """Mark a product as expired."""
     try:
         product = mark_product_status(

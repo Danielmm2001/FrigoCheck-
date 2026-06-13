@@ -16,8 +16,6 @@ class ApiService {
 
   final AuthService authService;
 
-  String get _userId => authService.currentUserId;
-
   Map<String, String> get _headers {
     final token = authService.accessToken;
     return {
@@ -27,7 +25,6 @@ class ApiService {
 
   Future<List<ProductModel>> fetchProducts({String? status}) async {
     final queryParams = <String, String>{
-      'user_id': _userId,
       if (status != null) 'status': status,
     };
 
@@ -48,7 +45,7 @@ class ApiService {
 
   Future<StatsSummaryModel> fetchStatsSummary() async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/stats/summary').replace(
-      queryParameters: {'user_id': _userId},
+      queryParameters: const {},
     );
     final response = await http.get(uri, headers: _headers);
 
@@ -64,7 +61,6 @@ class ApiService {
       {required int year, required int month}) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/stats/daily').replace(
       queryParameters: {
-        'user_id': _userId,
         'year': year.toString(),
         'month': month.toString(),
       },
@@ -97,7 +93,6 @@ class ApiService {
     final uri = Uri.parse('${ApiConstants.baseUrl}/receipts/analyze');
     final request = http.MultipartRequest('POST', uri)
       ..headers.addAll(_headers)
-      ..fields['user_id'] = _userId
       ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
 
     final streamedResponse = await request.send();
@@ -147,7 +142,6 @@ class ApiService {
       uri,
       headers: {'Content-Type': 'application/json', ..._headers},
       body: jsonEncode({
-        'user_id': _userId,
         'store': store.toJson(),
         'products': products.map((product) => product.toJson()).toList(),
         'warnings': warnings,
@@ -176,10 +170,8 @@ class ApiService {
 
   Future<ProductModel> _changeProductStatus(
       String productId, String action) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/products/$productId/$action')
-        .replace(
-      queryParameters: {'user_id': _userId},
-    );
+    final uri =
+        Uri.parse('${ApiConstants.baseUrl}/products/$productId/$action');
     final response = await http.post(uri, headers: _headers);
 
     if (response.statusCode != 200) {

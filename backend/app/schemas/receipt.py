@@ -24,7 +24,7 @@ class DetectedProduct(BaseModel):
 
 
 class SaveReceiptRequest(BaseModel):
-    user_id: str = Field(..., description="Temporary user id until auth is connected")
+    user_id: str | None = Field(default=None, description="Ignored by the API; user comes from the auth token")
     store: StoreData
     products: list[DetectedProduct]
     warnings: list[str] = []

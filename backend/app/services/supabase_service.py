@@ -330,12 +330,12 @@ def _optional_barcode_cache_field_from_error(message: str) -> str | None:
     return None
 
 
-def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
+def save_receipt_with_products(payload: SaveReceiptRequest, user_id: str) -> dict[str, Any]:
     supabase = get_supabase_client()
 
     saved_products_total = sum((product.price or 0) for product in payload.products)
     receipt_insert = {
-        "user_id": payload.user_id,
+        "user_id": user_id,
         "store_name": payload.store.name,
         "purchase_date": payload.store.purchase_date,
         "total_amount": saved_products_total if saved_products_total else payload.store.total_amount,
@@ -357,7 +357,7 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
         clean_name = _clean_product_name(product.normalized_name or product.name)
         product_rows.append(
             {
-                "user_id": payload.user_id,
+                "user_id": user_id,
                 "receipt_id": receipt_id,
                 "name": clean_name,
                 "normalized_name": clean_name.lower(),
@@ -383,7 +383,7 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
         for saved_product in products_result.data or []:
             event_rows.append(
                 {
-                    "user_id": payload.user_id,
+                    "user_id": user_id,
                     "product_id": saved_product["id"],
                     "event_type": "created",
                     "metadata": {"source": "receipt_scan", "receipt_id": receipt_id},

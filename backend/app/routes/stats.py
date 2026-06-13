@@ -1,12 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.auth import current_user_id
 from app.services.supabase_service import get_daily_stats_for_user, get_stats_summary_for_user
 
 router = APIRouter()
 
 
 @router.get("/summary")
-def get_stats_summary(user_id: str = Query(...)):
+def get_stats_summary(user_id: str = Depends(current_user_id)):
     """Return real summary stats for one user."""
     try:
         return get_stats_summary_for_user(user_id=user_id)
@@ -16,9 +17,9 @@ def get_stats_summary(user_id: str = Query(...)):
 
 @router.get("/daily")
 def get_daily_stats(
-    user_id: str = Query(...),
     year: int = Query(..., ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
+    user_id: str = Depends(current_user_id),
 ):
     """Return day-by-day savings and waste for a calendar month."""
     try:
