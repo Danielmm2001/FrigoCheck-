@@ -11,22 +11,36 @@ CANVAS_SIZE = 480
 PRODUCT_MAX_SIZE = 390
 
 
-def standardize_product_image_url(image_url: str | None) -> str | None:
+def standardize_product_image_bytes(image_url: str | None) -> bytes | None:
     if not image_url:
         return None
 
     try:
         image_bytes = _download_image(image_url)
         if not image_bytes:
-            return image_url
+            return None
         image = Image.open(BytesIO(image_bytes)).convert("RGBA")
         standardized = _standardize_image(image)
         output = BytesIO()
         standardized.save(output, format="PNG", optimize=True)
-        encoded = base64.b64encode(output.getvalue()).decode("ascii")
-        return f"data:image/png;base64,{encoded}"
+        return output.getvalue()
     except Exception:
+        return None
+
+
+def standardize_product_image_url(image_url: str | None) -> str | None:
+    if not image_url:
+        return None
+
+    standardized = standardize_product_image_bytes(image_url)
+    if standardized:
+        encoded = base64.b64encode(standardized).decode("ascii")
+        return f"data:image/png;base64,{encoded}"
+
+    try:
         return image_url
+    except Exception:
+        return None
 
 
 def _download_image(image_url: str) -> bytes | None:

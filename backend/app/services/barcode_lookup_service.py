@@ -7,8 +7,13 @@ from urllib.request import Request, urlopen
 
 from app.config import settings
 from app.schemas.receipt import BarcodeProductLookup
-from app.services.product_image_service import standardize_product_image_url
-from app.services.supabase_service import _clean_product_name, get_cached_barcode_product
+from app.services.product_image_service import standardize_product_image_bytes, standardize_product_image_url
+from app.services.supabase_service import (
+    _clean_product_name,
+    get_cached_barcode_product,
+    upload_processed_product_image,
+    upsert_enriched_barcode_product,
+)
 
 
 OPEN_FOOD_FACTS_FIELDS = ",".join(
@@ -48,15 +53,22 @@ def lookup_barcode_product(barcode: str) -> BarcodeProductLookup:
     for source, base_url in OPEN_FACTS_PROVIDERS:
         product = _fetch_open_facts_product(clean_barcode, base_url=base_url)
         if product:
-            return _lookup_from_open_facts_product(
+            lookup = _lookup_from_open_facts_product(
                 barcode=clean_barcode,
                 product=product,
                 source=source,
             )
+            return _cache_and_return_lookup(
+                lookup,
+                original_image_url=_product_image_url(product),
+            )
 
     commercial_lookup = _fetch_barcode_lookup_product(clean_barcode)
     if commercial_lookup:
-        return commercial_lookup
+        return _cache_and_return_lookup(
+            commercial_lookup,
+            original_image_url=commercial_lookup.image_url,
+        )
 
     return BarcodeProductLookup(
         barcode=clean_barcode,
@@ -89,9 +101,7 @@ def _lookup_from_open_facts_product(
         storage_location="freezer" if category == "frozen" else "fridge",
         estimated_expiry_days=expiry_days,
         expiry_confidence="medium",
-        image_url=standardize_product_image_url(
-            product.get("image_front_url") or product.get("image_url")
-        ),
+        image_url=_product_image_url(product),
         source=source,
     )
 
@@ -160,7 +170,7 @@ def _fetch_barcode_lookup_product(barcode: str) -> BarcodeProductLookup | None:
         }
     )
     quantity, unit = _parse_quantity(product.get("size"))
-    image_url = standardize_product_image_url(_first_image(product.get("images")))
+    image_url = _first_image(product.get("images"))
     normalized_name = _clean_product_name(name)
 
     return BarcodeProductLookup(
@@ -180,12 +190,45 @@ def _fetch_barcode_lookup_product(barcode: str) -> BarcodeProductLookup | None:
     )
 
 
+def _cache_and_return_lookup(
+    product: BarcodeProductLookup,
+    *,
+    original_image_url: str | None,
+) -> BarcodeProductLookup:
+    if not product.found:
+        return product
+
+    processed_image_url = None
+    image_storage_path = None
+    if original_image_url:
+        image_bytes = standardize_product_image_bytes(original_image_url)
+        processed_image_url, image_storage_path = upload_processed_product_image(
+            barcode=product.barcode,
+            image_bytes=image_bytes,
+        )
+        product.image_url = processed_image_url or standardize_product_image_url(original_image_url)
+
+    upsert_enriched_barcode_product(
+        product,
+        original_image_url=original_image_url,
+        processed_image_url=processed_image_url,
+        image_storage_path=image_storage_path,
+        provider_source=product.source,
+        is_verified=False,
+    )
+    return product
+
+
 def _product_name(product: dict[str, Any]) -> str | None:
     for key in ("product_name_es", "product_name", "generic_name"):
         value = product.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()
     return None
+
+
+def _product_image_url(product: dict[str, Any]) -> str | None:
+    return _string_value(product.get("image_front_url")) or _string_value(product.get("image_url"))
 
 
 def _first_brand(value: Any) -> str | None:

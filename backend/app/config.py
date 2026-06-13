@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     BARCODE_LOOKUP_API_KEY: str = ""
+    PRODUCT_IMAGE_BUCKET: str = "product-images"
     ENVIRONMENT: str = "development"
 
     class Config:

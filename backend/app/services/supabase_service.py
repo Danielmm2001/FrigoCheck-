@@ -3,6 +3,9 @@ import json
 import re
 from datetime import date, datetime, timedelta
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 from supabase import Client, create_client
 
@@ -28,6 +31,18 @@ EDITABLE_PRODUCT_FIELDS = {
 
 PRODUCT_OPTIONAL_COLUMN_FIELDS = {"barcode", "image_url"}
 BARCODE_CACHE_TABLE = "barcode_products"
+BARCODE_CACHE_OPTIONAL_FIELDS = {
+    "original_image_url",
+    "processed_image_url",
+    "image_storage_path",
+    "image_processing_status",
+    "provider_source",
+    "is_verified",
+    "verified_by",
+    "verified_at",
+    "confidence_score",
+    "last_lookup_at",
+}
 
 
 def _normalize_supabase_url(url: str) -> str:
@@ -135,6 +150,8 @@ def get_cached_barcode_product(barcode: str) -> BarcodeProductLookup | None:
         return None
 
     row = result.data[0]
+    image_url = row.get("processed_image_url") or row.get("image_url")
+    source = row.get("source") or row.get("provider_source") or "frigocheck_cache"
     return BarcodeProductLookup(
         barcode=row.get("barcode") or barcode,
         found=True,
@@ -147,8 +164,8 @@ def get_cached_barcode_product(barcode: str) -> BarcodeProductLookup | None:
         storage_location=row.get("storage_location"),
         estimated_expiry_days=row.get("estimated_expiry_days"),
         expiry_confidence=row.get("expiry_confidence") or "medium",
-        image_url=row.get("image_url"),
-        source=row.get("source") or "frigocheck_cache",
+        image_url=image_url,
+        source=source,
     )
 
 
@@ -178,6 +195,139 @@ def upsert_cached_barcode_product(product) -> None:
         supabase.table(BARCODE_CACHE_TABLE).upsert(row, on_conflict="barcode").execute()
     except Exception:
         return
+
+
+def upload_processed_product_image(
+    *,
+    barcode: str,
+    image_bytes: bytes | None,
+) -> tuple[str | None, str | None]:
+    if not barcode or not image_bytes:
+        return None, None
+
+    bucket = settings.PRODUCT_IMAGE_BUCKET.strip() or "product-images"
+    _ensure_product_image_bucket(bucket)
+    storage_path = f"barcodes/{barcode}.png"
+    supabase_url = _normalize_supabase_url(settings.SUPABASE_URL)
+    object_url = (
+        f"{supabase_url}/storage/v1/object/{quote(bucket)}/"
+        f"{quote(storage_path, safe='/')}"
+    )
+    request = Request(
+        object_url,
+        data=image_bytes,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+            "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+            "Content-Type": "image/png",
+            "x-upsert": "true",
+        },
+    )
+    try:
+        with urlopen(request, timeout=8):
+            public_url = (
+                f"{supabase_url}/storage/v1/object/public/{quote(bucket)}/"
+                f"{quote(storage_path, safe='/')}"
+            )
+            return public_url, storage_path
+    except (HTTPError, URLError, TimeoutError):
+        return None, None
+
+
+def _ensure_product_image_bucket(bucket: str) -> None:
+    supabase_url = _normalize_supabase_url(settings.SUPABASE_URL)
+    bucket_url = f"{supabase_url}/storage/v1/bucket"
+    payload = json.dumps(
+        {
+            "id": bucket,
+            "name": bucket,
+            "public": True,
+            "file_size_limit": 5_242_880,
+            "allowed_mime_types": ["image/png", "image/jpeg", "image/webp"],
+        }
+    ).encode("utf-8")
+    request = Request(
+        bucket_url,
+        data=payload,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+            "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urlopen(request, timeout=5):
+            return
+    except HTTPError as exc:
+        if exc.code in {400, 409}:
+            return
+    except (URLError, TimeoutError):
+        return
+
+
+def upsert_enriched_barcode_product(
+    product: BarcodeProductLookup,
+    *,
+    original_image_url: str | None = None,
+    processed_image_url: str | None = None,
+    image_storage_path: str | None = None,
+    provider_source: str | None = None,
+    is_verified: bool = False,
+) -> None:
+    barcode = (product.barcode or "").strip()
+    if not barcode or not product.found:
+        return
+
+    clean_name = _clean_product_name(product.normalized_name or product.name)
+    source = "frigocheck_verified" if is_verified else "external_cache"
+    row = {
+        "barcode": barcode,
+        "name": clean_name,
+        "normalized_name": clean_name.lower(),
+        "brand": product.brand,
+        "category": product.category,
+        "quantity": product.quantity,
+        "unit": product.unit,
+        "storage_location": product.storage_location,
+        "estimated_expiry_days": product.estimated_expiry_days,
+        "expiry_confidence": product.expiry_confidence,
+        "image_url": processed_image_url or product.image_url,
+        "original_image_url": original_image_url,
+        "processed_image_url": processed_image_url or product.image_url,
+        "image_storage_path": image_storage_path,
+        "image_processing_status": "processed" if processed_image_url else "fallback",
+        "provider_source": provider_source or product.source,
+        "source": source,
+        "is_verified": is_verified,
+        "confidence_score": 0.95 if is_verified else 0.70,
+        "last_lookup_at": datetime.utcnow().isoformat(),
+    }
+
+    _upsert_barcode_cache_row(row)
+
+
+def _upsert_barcode_cache_row(row: dict[str, Any]) -> None:
+    supabase = get_supabase_client()
+    try:
+        supabase.table(BARCODE_CACHE_TABLE).upsert(row, on_conflict="barcode").execute()
+    except Exception as exc:
+        missing_field = _optional_barcode_cache_field_from_error(str(exc))
+        if not missing_field:
+            return
+        fallback = dict(row)
+        fallback.pop(missing_field, None)
+        _upsert_barcode_cache_row(fallback)
+
+
+def _optional_barcode_cache_field_from_error(message: str) -> str | None:
+    if "schema cache" not in message and "column" not in message:
+        return None
+    for field in BARCODE_CACHE_OPTIONAL_FIELDS:
+        if field in message:
+            return field
+    return None
 
 
 def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
