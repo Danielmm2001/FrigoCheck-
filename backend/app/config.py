@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     BARCODE_LOOKUP_API_KEY: str = ""
     PRODUCT_IMAGE_BUCKET: str = "product-images"
+    PRODUCT_IMAGE_AI_CLEANUP_ENABLED: bool = True
+    PRODUCT_IMAGE_AI_MODEL: str = "gpt-image-1"
     ENVIRONMENT: str = "development"
 
     class Config:

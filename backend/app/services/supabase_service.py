@@ -396,6 +396,7 @@ def upsert_enriched_barcode_product(
     original_image_url: str | None = None,
     processed_image_url: str | None = None,
     image_storage_path: str | None = None,
+    image_processing_status: str | None = None,
     provider_source: str | None = None,
     is_verified: bool = False,
 ) -> None:
@@ -420,7 +421,8 @@ def upsert_enriched_barcode_product(
         "original_image_url": original_image_url,
         "processed_image_url": processed_image_url or product.image_url,
         "image_storage_path": image_storage_path,
-        "image_processing_status": "processed_v2" if processed_image_url else "fallback",
+        "image_processing_status": image_processing_status
+        or ("processed_v2" if processed_image_url else "fallback"),
         "provider_source": provider_source or product.source,
         "source": source,
         "is_verified": is_verified,
@@ -454,7 +456,7 @@ def _optional_barcode_cache_field_from_error(message: str) -> str | None:
 
 
 def _refresh_cached_image_if_needed(row: dict[str, Any]) -> dict[str, Any]:
-    if row.get("image_processing_status") == "processed_v2":
+    if row.get("image_processing_status") in {"processed_v2", "ai_cleaned"}:
         return row
 
     barcode = row.get("barcode")

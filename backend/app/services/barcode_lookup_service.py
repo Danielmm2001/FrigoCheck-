@@ -7,7 +7,11 @@ from urllib.request import Request, urlopen
 
 from app.config import settings
 from app.schemas.receipt import BarcodeProductLookup
-from app.services.product_image_service import standardize_product_image_bytes, standardize_product_image_url
+from app.services.product_image_service import (
+    clean_product_image_with_ai_bytes,
+    standardize_product_image_bytes,
+    standardize_product_image_url,
+)
 from app.services.supabase_service import (
     _clean_product_name,
     get_cached_barcode_product,
@@ -200,8 +204,18 @@ def _cache_and_return_lookup(
 
     processed_image_url = None
     image_storage_path = None
+    image_processing_status = None
     if original_image_url:
-        image_bytes = standardize_product_image_bytes(original_image_url)
+        image_bytes = clean_product_image_with_ai_bytes(
+            original_image_url,
+            product_name=product.name or product.normalized_name,
+        )
+        if image_bytes:
+            image_processing_status = "ai_cleaned"
+        if not image_bytes:
+            image_bytes = standardize_product_image_bytes(original_image_url)
+            if image_bytes:
+                image_processing_status = "processed_v2"
         processed_image_url, image_storage_path = upload_processed_product_image(
             barcode=product.barcode,
             image_bytes=image_bytes,
@@ -213,6 +227,7 @@ def _cache_and_return_lookup(
         original_image_url=original_image_url,
         processed_image_url=processed_image_url,
         image_storage_path=image_storage_path,
+        image_processing_status=image_processing_status,
         provider_source=product.source,
         is_verified=False,
     )

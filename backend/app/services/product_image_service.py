@@ -5,11 +5,15 @@ from statistics import median
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from openai import OpenAI
 from PIL import Image
+
+from app.config import settings
 
 
 CANVAS_SIZE = 480
 PRODUCT_MAX_SIZE = 390
+AI_EDIT_SIZE = 1024
 
 
 def standardize_product_image_bytes(image_url: str | None) -> bytes | None:
@@ -22,6 +26,47 @@ def standardize_product_image_bytes(image_url: str | None) -> bytes | None:
             return None
         image = Image.open(BytesIO(image_bytes)).convert("RGBA")
         standardized = _standardize_image(image)
+        output = BytesIO()
+        standardized.save(output, format="PNG", optimize=True)
+        return output.getvalue()
+    except Exception:
+        return None
+
+
+def clean_product_image_with_ai_bytes(
+    image_url: str | None,
+    *,
+    product_name: str | None = None,
+) -> bytes | None:
+    if (
+        not image_url
+        or not settings.PRODUCT_IMAGE_AI_CLEANUP_ENABLED
+        or not settings.OPENAI_API_KEY
+    ):
+        return None
+
+    try:
+        image_bytes = _download_image(image_url, timeout=10)
+        if not image_bytes:
+            return None
+
+        input_png = _prepare_ai_input_png(image_bytes)
+        prompt = _ai_cleanup_prompt(product_name)
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        input_file = BytesIO(input_png)
+        input_file.name = "product.png"
+        result = client.images.edit(
+            model=settings.PRODUCT_IMAGE_AI_MODEL,
+            image=input_file,
+            prompt=prompt,
+            size="1024x1024",
+            quality="low",
+        )
+        encoded = result.data[0].b64_json
+        if not encoded:
+            return None
+        edited = Image.open(BytesIO(base64.b64decode(encoded))).convert("RGBA")
+        standardized = _standardize_image(edited)
         output = BytesIO()
         standardized.save(output, format="PNG", optimize=True)
         return output.getvalue()
@@ -44,7 +89,7 @@ def standardize_product_image_url(image_url: str | None) -> str | None:
         return None
 
 
-def _download_image(image_url: str) -> bytes | None:
+def _download_image(image_url: str, *, timeout: int = 3) -> bytes | None:
     request = Request(
         image_url,
         headers={
@@ -53,13 +98,40 @@ def _download_image(image_url: str) -> bytes | None:
         },
     )
     try:
-        with urlopen(request, timeout=3) as response:
+        with urlopen(request, timeout=timeout) as response:
             content_type = response.headers.get("Content-Type", "")
             if not content_type.startswith("image/"):
                 return None
             return response.read(6_000_000)
     except (HTTPError, URLError, TimeoutError):
         return None
+
+
+def _prepare_ai_input_png(image_bytes: bytes) -> bytes:
+    image = Image.open(BytesIO(image_bytes)).convert("RGB")
+    image.thumbnail((AI_EDIT_SIZE, AI_EDIT_SIZE), Image.Resampling.LANCZOS)
+
+    canvas = Image.new("RGB", (AI_EDIT_SIZE, AI_EDIT_SIZE), (255, 255, 255))
+    x = (AI_EDIT_SIZE - image.width) // 2
+    y = (AI_EDIT_SIZE - image.height) // 2
+    canvas.paste(image, (x, y))
+
+    output = BytesIO()
+    canvas.save(output, format="PNG", optimize=True)
+    return output.getvalue()
+
+
+def _ai_cleanup_prompt(product_name: str | None) -> str:
+    name = product_name or "the food product"
+    return (
+        f"Create a clean ecommerce catalog image of {name}. "
+        "Use the input image as the exact product/package reference. "
+        "Keep the same product, packaging, logo, label layout, colors, and proportions. "
+        "Remove every background object, table, hand, shadow clutter, reflections, and scenery. "
+        "Place only the product centered on a pure white background. "
+        "Do not invent a different product. Do not add extra text or decorations. "
+        "Make it suitable for a mobile grocery inventory thumbnail."
+    )
 
 
 def _standardize_image(image: Image.Image) -> Image.Image:
