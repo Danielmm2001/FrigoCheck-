@@ -176,6 +176,17 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
         return;
       }
 
+      if (!_isCompatibleBarcodeMatch(_products[index], lookup)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Ese codigo parece ser de ${lookup.name ?? 'otro producto'}, no de ${_cleanProductTitle(_products[index])}.',
+            ),
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _products[index] = _mergeBarcodeLookup(_products[index], lookup);
       });
@@ -273,6 +284,71 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
       imageUrl: lookup.imageUrl ?? product.imageUrl,
     );
   }
+
+  bool _isCompatibleBarcodeMatch(
+    DetectedProductModel product,
+    BarcodeProductLookupModel lookup,
+  ) {
+    final currentCategory = product.category;
+    final lookupCategory = lookup.category;
+    if (_hasStrictCategory(currentCategory) &&
+        _hasStrictCategory(lookupCategory) &&
+        !_categoriesCompatible(currentCategory, lookupCategory!)) {
+      return false;
+    }
+
+    final currentTokens = _foodTokens(_cleanProductTitle(product));
+    final lookupTokens =
+        _foodTokens(lookup.name ?? lookup.normalizedName ?? '');
+    if (currentTokens.isEmpty || lookupTokens.isEmpty) {
+      return true;
+    }
+
+    return currentTokens.intersection(lookupTokens).isNotEmpty;
+  }
+
+  bool _hasStrictCategory(String? category) {
+    return category != null &&
+        category.isNotEmpty &&
+        category != 'other' &&
+        category != 'other_refrigerated';
+  }
+
+  bool _categoriesCompatible(String current, String lookup) {
+    if (current == lookup) return true;
+    const groups = [
+      {'cheese', 'dairy', 'yogurt'},
+      {'meat', 'poultry'},
+      {'fish', 'seafood'},
+      {'fruit', 'vegetables'},
+    ];
+    return groups
+        .any((group) => group.contains(current) && group.contains(lookup));
+  }
+
+  Set<String> _foodTokens(String value) {
+    final normalized = value.toLowerCase().trim();
+    final words = RegExp(r'[a-záéíóúüñ]{3,}')
+        .allMatches(normalized)
+        .map((match) => match.group(0)!)
+        .where((word) => !_tokenStopwords.contains(word))
+        .toSet();
+    return words;
+  }
+
+  static const Set<String> _tokenStopwords = {
+    'con',
+    'del',
+    'los',
+    'las',
+    'una',
+    'uno',
+    'pack',
+    'natural',
+    'producto',
+    'mercadona',
+    'hacendado',
+  };
 
   bool _shouldUseLookupName(String currentTitle, String lookupTitle) {
     final current = currentTitle.trim();

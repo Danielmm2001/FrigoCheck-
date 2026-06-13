@@ -150,6 +150,7 @@ def get_cached_barcode_product(barcode: str) -> BarcodeProductLookup | None:
         return None
 
     row = result.data[0]
+    row = _refresh_cached_image_if_needed(row)
     image_url = row.get("processed_image_url") or row.get("image_url")
     source = row.get("source") or row.get("provider_source") or "frigocheck_cache"
     return BarcodeProductLookup(
@@ -167,6 +168,128 @@ def get_cached_barcode_product(barcode: str) -> BarcodeProductLookup | None:
         image_url=image_url,
         source=source,
     )
+
+
+def find_cached_product_for_name(name: str | None) -> BarcodeProductLookup | None:
+    clean_name = _clean_product_name(name)
+    if not clean_name or clean_name.lower() == "producto":
+        return None
+
+    tokens = _meaningful_name_tokens(clean_name)
+    if not tokens:
+        return None
+
+    supabase = get_supabase_client()
+    try:
+        result = (
+            supabase.table(BARCODE_CACHE_TABLE)
+            .select("*")
+            .limit(30)
+            .execute()
+        )
+    except Exception:
+        return None
+
+    best_row = None
+    best_score = 0.0
+    for row in result.data or []:
+        row_name = row.get("normalized_name") or row.get("name")
+        row_tokens = _meaningful_name_tokens(row_name)
+        if not row_tokens:
+            continue
+        score = len(tokens & row_tokens) / max(len(tokens | row_tokens), 1)
+        if row.get("is_verified"):
+            score += 0.15
+        if score > best_score:
+            best_score = score
+            best_row = row
+
+    if best_row is None or best_score < 0.50:
+        return None
+
+    best_row = _refresh_cached_image_if_needed(best_row)
+    image_url = best_row.get("processed_image_url") or best_row.get("image_url")
+    source = best_row.get("source") or best_row.get("provider_source") or "frigocheck_cache"
+    return BarcodeProductLookup(
+        barcode=best_row.get("barcode") or "",
+        found=True,
+        name=best_row.get("name"),
+        normalized_name=best_row.get("normalized_name"),
+        brand=best_row.get("brand"),
+        category=best_row.get("category"),
+        quantity=best_row.get("quantity"),
+        unit=best_row.get("unit"),
+        storage_location=best_row.get("storage_location"),
+        estimated_expiry_days=best_row.get("estimated_expiry_days"),
+        expiry_confidence=best_row.get("expiry_confidence") or "medium",
+        image_url=image_url,
+        source=source,
+    )
+
+
+def enrich_detected_products_from_cache(analysis: dict[str, Any]) -> dict[str, Any]:
+    products = analysis.get("products")
+    if not isinstance(products, list):
+        return analysis
+
+    enriched_products = []
+    for product in products:
+        if not isinstance(product, dict):
+            enriched_products.append(product)
+            continue
+
+        cached = find_cached_product_for_name(
+            product.get("normalized_name") or product.get("name")
+        )
+        if cached is None:
+            enriched_products.append(product)
+            continue
+
+        merged = dict(product)
+        if not merged.get("barcode") and cached.barcode:
+            merged["barcode"] = cached.barcode
+        if _is_generic_category(merged.get("category")) and cached.category:
+            merged["category"] = cached.category
+        if not merged.get("storage_location") and cached.storage_location:
+            merged["storage_location"] = cached.storage_location
+        if not merged.get("estimated_expiry_days") and cached.estimated_expiry_days:
+            merged["estimated_expiry_days"] = cached.estimated_expiry_days
+            merged["expiry_confidence"] = cached.expiry_confidence
+        if not merged.get("image_url") and cached.image_url:
+            merged["image_url"] = cached.image_url
+        if not merged.get("normalized_name"):
+            merged["normalized_name"] = _clean_product_name(
+                merged.get("name")
+            ).lower()
+        enriched_products.append(merged)
+
+    enriched = dict(analysis)
+    enriched["products"] = enriched_products
+    return enriched
+
+
+def _meaningful_name_tokens(value: str | None) -> set[str]:
+    cleaned = _clean_product_name(value).lower()
+    cleaned = re.sub(r"\bqued[oó]\b", "queso", cleaned)
+    words = re.findall(r"[a-záéíóúüñ]{3,}", cleaned)
+    stopwords = {
+        "con",
+        "del",
+        "los",
+        "las",
+        "una",
+        "uno",
+        "natural",
+        "pack",
+        "producto",
+        "mercadona",
+        "hacendado",
+    }
+    return {word for word in words if word not in stopwords}
+
+
+def _is_generic_category(value: Any) -> bool:
+    return value in {None, "", "other", "other_refrigerated"}
 
 
 def upsert_cached_barcode_product(product) -> None:
@@ -297,7 +420,7 @@ def upsert_enriched_barcode_product(
         "original_image_url": original_image_url,
         "processed_image_url": processed_image_url or product.image_url,
         "image_storage_path": image_storage_path,
-        "image_processing_status": "processed" if processed_image_url else "fallback",
+        "image_processing_status": "processed_v2" if processed_image_url else "fallback",
         "provider_source": provider_source or product.source,
         "source": source,
         "is_verified": is_verified,
@@ -328,6 +451,41 @@ def _optional_barcode_cache_field_from_error(message: str) -> str | None:
         if field in message:
             return field
     return None
+
+
+def _refresh_cached_image_if_needed(row: dict[str, Any]) -> dict[str, Any]:
+    if row.get("image_processing_status") == "processed_v2":
+        return row
+
+    barcode = row.get("barcode")
+    original_image_url = row.get("original_image_url")
+    if not barcode or not original_image_url:
+        return row
+
+    try:
+        from app.services.product_image_service import standardize_product_image_bytes
+
+        image_bytes = standardize_product_image_bytes(original_image_url)
+        processed_image_url, image_storage_path = upload_processed_product_image(
+            barcode=barcode,
+            image_bytes=image_bytes,
+        )
+        if not processed_image_url:
+            return row
+
+        update = {
+            "image_url": processed_image_url,
+            "processed_image_url": processed_image_url,
+            "image_storage_path": image_storage_path,
+            "image_processing_status": "processed_v2",
+            "last_lookup_at": datetime.utcnow().isoformat(),
+        }
+        get_supabase_client().table(BARCODE_CACHE_TABLE).update(update).eq(
+            "barcode", barcode
+        ).execute()
+        return {**row, **update}
+    except Exception:
+        return row
 
 
 def save_receipt_with_products(payload: SaveReceiptRequest, user_id: str) -> dict[str, Any]:

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from app.auth import current_user_id
 from app.schemas.receipt import SaveReceiptRequest, SaveReceiptResponse
 from app.services.openai_service import analyze_expiry_date_image, analyze_receipt_image
-from app.services.supabase_service import save_receipt_with_products
+from app.services.supabase_service import enrich_detected_products_from_cache, save_receipt_with_products
 
 router = APIRouter()
 
@@ -23,7 +23,7 @@ async def analyze_receipt(
             image_bytes=image_bytes,
             filename=image.filename,
         )
-        return result
+        return enrich_detected_products_from_cache(result)
     except HTTPException:
         raise
     except Exception as exc:
