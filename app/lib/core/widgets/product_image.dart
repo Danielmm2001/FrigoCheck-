@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -35,13 +38,10 @@ class ProductImage extends StatelessWidget {
       child: _hasImage
           ? Padding(
               padding: EdgeInsets.all(size * .08),
-              child: Image.network(
-                imageUrl!,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => _FallbackProductIcon(
-                  spec: spec,
-                  size: size,
-                ),
+              child: _ProductNetworkImage(
+                imageUrl: imageUrl!,
+                spec: spec,
+                size: size,
               ),
             )
           : _FallbackProductIcon(spec: spec, size: size),
@@ -49,6 +49,52 @@ class ProductImage extends StatelessWidget {
   }
 
   bool get _hasImage => imageUrl != null && imageUrl!.trim().isNotEmpty;
+}
+
+class _ProductNetworkImage extends StatelessWidget {
+  const _ProductNetworkImage({
+    required this.imageUrl,
+    required this.spec,
+    required this.size,
+  });
+
+  final String imageUrl;
+  final _ProductVisualSpec spec;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final bytes = _dataImageBytes;
+    if (bytes != null) {
+      return Image.memory(
+        bytes,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) =>
+            _FallbackProductIcon(spec: spec, size: size),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => _FallbackProductIcon(
+        spec: spec,
+        size: size,
+      ),
+    );
+  }
+
+  Uint8List? get _dataImageBytes {
+    const prefix = 'data:image/';
+    if (!imageUrl.startsWith(prefix)) return null;
+    final commaIndex = imageUrl.indexOf(',');
+    if (commaIndex == -1) return null;
+    try {
+      return base64Decode(imageUrl.substring(commaIndex + 1));
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 class _FallbackProductIcon extends StatelessWidget {

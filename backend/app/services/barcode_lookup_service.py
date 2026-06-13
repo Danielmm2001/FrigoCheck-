@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 
 from app.config import settings
 from app.schemas.receipt import BarcodeProductLookup
+from app.services.product_image_service import standardize_product_image_url
 from app.services.supabase_service import _clean_product_name, get_cached_barcode_product
 
 
@@ -88,7 +89,9 @@ def _lookup_from_open_facts_product(
         storage_location="freezer" if category == "frozen" else "fridge",
         estimated_expiry_days=expiry_days,
         expiry_confidence="medium",
-        image_url=product.get("image_front_url") or product.get("image_url"),
+        image_url=standardize_product_image_url(
+            product.get("image_front_url") or product.get("image_url")
+        ),
         source=source,
     )
 
@@ -157,7 +160,7 @@ def _fetch_barcode_lookup_product(barcode: str) -> BarcodeProductLookup | None:
         }
     )
     quantity, unit = _parse_quantity(product.get("size"))
-    image_url = _first_image(product.get("images"))
+    image_url = standardize_product_image_url(_first_image(product.get("images")))
     normalized_name = _clean_product_name(name)
 
     return BarcodeProductLookup(
