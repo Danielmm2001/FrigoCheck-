@@ -205,7 +205,6 @@ def save_receipt_with_products(payload: SaveReceiptRequest) -> dict[str, Any]:
     for product in payload.products:
         estimated_expiry_date = _estimate_expiry_date_from_added_date(product.estimated_expiry_days)
         clean_name = _clean_product_name(product.normalized_name or product.name)
-        upsert_cached_barcode_product(product)
         product_rows.append(
             {
                 "user_id": payload.user_id,
