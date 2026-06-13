@@ -111,6 +111,31 @@ class ApiService {
     return ReceiptAnalysisModel.fromJson(decoded);
   }
 
+  Future<ExpiryDateScanResult> analyzeExpiryDateImage({
+    required File imageFile,
+    String? productName,
+  }) async {
+    final uri =
+        Uri.parse('${ApiConstants.baseUrl}/receipts/expiry-date/analyze');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_headers);
+    if (productName != null && productName.trim().isNotEmpty) {
+      request.fields['product_name'] = productName.trim();
+    }
+    request.files
+        .add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      throw Exception('Error leyendo caducidad: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return ExpiryDateScanResult.fromJson(decoded);
+  }
+
   Future<void> saveReceiptProducts({
     required ReceiptStoreModel store,
     required List<DetectedProductModel> products,
@@ -166,5 +191,31 @@ class ApiService {
         ProductModel.fromJson(decoded['product'] as Map<String, dynamic>);
     notifyInventoryChanged();
     return product;
+  }
+}
+
+class ExpiryDateScanResult {
+  const ExpiryDateScanResult({
+    this.expiryDate,
+    this.daysLeft,
+    this.rawText,
+    this.confidence = 'low',
+    this.reason,
+  });
+
+  final String? expiryDate;
+  final int? daysLeft;
+  final String? rawText;
+  final String confidence;
+  final String? reason;
+
+  factory ExpiryDateScanResult.fromJson(Map<String, dynamic> json) {
+    return ExpiryDateScanResult(
+      expiryDate: json['expiry_date']?.toString(),
+      daysLeft: (json['days_left'] as num?)?.toInt(),
+      rawText: json['raw_text']?.toString(),
+      confidence: json['confidence']?.toString() ?? 'low',
+      reason: json['reason']?.toString(),
+    );
   }
 }

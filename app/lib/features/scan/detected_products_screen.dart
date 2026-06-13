@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -24,9 +27,11 @@ class DetectedProductsScreen extends StatefulWidget {
 
 class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
   final ApiService _apiService = const ApiService();
+  final ImagePicker _imagePicker = ImagePicker();
   late List<DetectedProductModel> _products;
   bool _isSaving = false;
   int? _barcodeLoadingIndex;
+  bool _isExpiryScanLoading = false;
 
   @override
   void initState() {
@@ -186,6 +191,58 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
     }
   }
 
+  Future<void> _scanExpiryDateIntoField({
+    required TextEditingController expiryController,
+    required TextEditingController nameController,
+    required void Function(String value) onConfidenceChanged,
+  }) async {
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
+    if (image == null) return;
+    if (!mounted) return;
+
+    setState(() => _isExpiryScanLoading = true);
+    try {
+      final result = await _apiService.analyzeExpiryDateImage(
+        imageFile: File(image.path),
+        productName: nameController.text,
+      );
+      if (!mounted) return;
+
+      final days = result.daysLeft;
+      if (days == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('No he podido leer una fecha clara. Prueba con más luz.'),
+          ),
+        );
+        return;
+      }
+
+      expiryController.text = days < 0 ? '0' : days.toString();
+      onConfidenceChanged(result.confidence == 'high' ? 'high' : 'medium');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.expiryDate == null
+                ? 'Caducidad actualizada'
+                : 'Caducidad detectada: ${result.expiryDate}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _isExpiryScanLoading = false);
+    }
+  }
+
   DetectedProductModel _mergeBarcodeLookup(
     DetectedProductModel product,
     BarcodeProductLookupModel lookup,
@@ -264,6 +321,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
       builder: (context) {
         String category = product.category;
         String storage = product.storageLocation;
+        String expiryConfidence = product.expiryConfidence;
         return AlertDialog(
           title: Text(title),
           insetPadding:
@@ -289,7 +347,29 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                   TextField(
                     controller: expiryController,
                     keyboardType: TextInputType.number,
-                    decoration: _dialogDecoration('Días hasta caducar'),
+                    decoration:
+                        _dialogDecoration('Días hasta caducar').copyWith(
+                      suffixIcon: IconButton(
+                        tooltip: 'Escanear fecha',
+                        onPressed: _isExpiryScanLoading
+                            ? null
+                            : () => _scanExpiryDateIntoField(
+                                  expiryController: expiryController,
+                                  nameController: nameController,
+                                  onConfidenceChanged: (value) {
+                                    expiryConfidence = value;
+                                  },
+                                ),
+                        icon: _isExpiryScanLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.event_available_rounded),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   TextField(
@@ -368,6 +448,7 @@ class _DetectedProductsScreenState extends State<DetectedProductsScreen> {
                     category: category,
                     storageLocation: storage,
                     estimatedExpiryDays: expiryDays,
+                    expiryConfidence: expiryConfidence,
                     price: price,
                     confidence: product.confidence == 'manual'
                         ? 'manual'
