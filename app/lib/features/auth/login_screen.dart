@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../data/services/api_service.dart';
 import '../../data/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final ApiService _apiService = const ApiService();
   final AuthService _authService = const AuthService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -169,8 +171,41 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await _runAuthAction(
-        () => _authService.signInWithEmail(email: email, password: password));
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signInWithEmail(email: email, password: password);
+      await _goHomeAfterRealSession();
+    } catch (error) {
+      if (!mounted) return;
+      final message = error.toString().toLowerCase();
+      if (message.contains('invalid login credentials') ||
+          message.contains('invalid_credentials')) {
+        await _showLoginCredentialMessage(email);
+      } else {
+        _showMessage(_friendlyAuthError(error));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _showLoginCredentialMessage(String email) async {
+    try {
+      final status = await _apiService.checkEmailStatus(email);
+      if (!mounted) return;
+      if (!status.exists) {
+        _showMessage('No existe una cuenta con ese correo.');
+        return;
+      }
+      if (!status.confirmed) {
+        _showMessage('Revisa tu correo y confirma la cuenta antes de entrar.');
+        return;
+      }
+      _showMessage('Contrasena incorrecta.');
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('Correo o contrasena incorrectos.');
+    }
   }
 
   Future<void> _signUp() async {
@@ -192,11 +227,28 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await _runAuthAction(
-      () => _authService.signUpWithEmail(email: email, password: password),
-      pendingMessage:
-          'Cuenta creada. Revisa tu correo para confirmarla antes de entrar.',
-    );
+    setState(() => _isLoading = true);
+    try {
+      final status = await _apiService.checkEmailStatus(email);
+      if (!mounted) return;
+      if (status.exists) {
+        _showMessage(status.confirmed
+            ? 'Ya existe una cuenta con ese correo. Inicia sesion.'
+            : 'Ya existe una cuenta pendiente de confirmar. Revisa tu correo.');
+        return;
+      }
+
+      await _authService.signUpWithEmail(email: email, password: password);
+      await _goHomeAfterRealSession(
+        pendingMessage:
+            'Cuenta creada. Revisa tu correo para confirmarla antes de entrar.',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(_friendlyAuthError(error));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _sendPasswordResetEmail() async {
@@ -220,6 +272,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
+      final status = await _apiService.checkEmailStatus(email);
+      if (!mounted) return;
+      if (!status.exists) {
+        _showMessage('No existe una cuenta con ese correo.');
+        return;
+      }
+
       await _authService.sendPasswordResetEmail(email);
       if (!mounted) return;
       Navigator.of(context).pop();

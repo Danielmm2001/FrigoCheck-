@@ -62,6 +62,30 @@ def get_supabase_client() -> Client:
     return create_client(supabase_url, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
+def get_auth_email_status(email: str) -> dict[str, bool]:
+    normalized_email = email.strip().lower()
+    if not normalized_email:
+        return {"exists": False, "confirmed": False}
+
+    try:
+        users = get_supabase_client().auth.admin.list_users()
+    except Exception:
+        return {"exists": False, "confirmed": False}
+
+    for user in users:
+        user_email = (getattr(user, "email", None) or "").strip().lower()
+        if user_email != normalized_email:
+            continue
+
+        confirmed = bool(
+            getattr(user, "email_confirmed_at", None)
+            or getattr(user, "confirmed_at", None)
+        )
+        return {"exists": True, "confirmed": confirmed}
+
+    return {"exists": False, "confirmed": False}
+
+
 def _estimate_expiry_date_from_added_date(days: int | None) -> str | None:
     if days is None:
         return None

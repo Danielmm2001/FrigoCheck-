@@ -43,6 +43,22 @@ class ApiService {
         .toList();
   }
 
+  Future<EmailStatusResult> checkEmailStatus(String email) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/auth/email-status');
+    final response = await http.post(
+      uri,
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Error comprobando correo: ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return EmailStatusResult.fromJson(decoded);
+  }
+
   Future<StatsSummaryModel> fetchStatsSummary() async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/stats/summary').replace(
       queryParameters: const {},
@@ -183,6 +199,23 @@ class ApiService {
         ProductModel.fromJson(decoded['product'] as Map<String, dynamic>);
     notifyInventoryChanged();
     return product;
+  }
+}
+
+class EmailStatusResult {
+  const EmailStatusResult({
+    required this.exists,
+    required this.confirmed,
+  });
+
+  final bool exists;
+  final bool confirmed;
+
+  factory EmailStatusResult.fromJson(Map<String, dynamic> json) {
+    return EmailStatusResult(
+      exists: json['exists'] == true,
+      confirmed: json['confirmed'] == true,
+    );
   }
 }
 
